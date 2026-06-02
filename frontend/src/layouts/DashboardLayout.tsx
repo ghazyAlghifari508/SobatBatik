@@ -1,6 +1,6 @@
 import { Link, Outlet, useLocation } from 'react-router-dom'
 import { useAuthStore } from '@/store/useAuthStore'
-import { LayoutDashboard, Package, ShoppingBag, Users, CheckSquare, LogOut, Store } from 'lucide-react'
+import { LayoutDashboard, Package, ShoppingBag, Users, CheckSquare, LogOut } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 export default function DashboardLayout() {

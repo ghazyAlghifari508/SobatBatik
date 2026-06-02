@@ -1,56 +1,42 @@
-import { useAuthStore } from '../../store/useAuthStore'
-import { useOrderStore } from '../../store/useOrderStore'
-import { useProductStore } from '../../store/useProductStore'
+import { useEffect, useState } from 'react'
+import { api } from '../../lib/axios'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/card'
 import { Package, ShoppingBag, DollarSign, Activity } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, LineChart, Line } from 'recharts'
 import { ChartContainer, ChartTooltipContent } from '../../components/ui/chart'
 
 export default function StoreDashboard() {
-  const { user } = useAuthStore()
-  const { orders } = useOrderStore()
-  const { products } = useProductStore()
+  const [stats, setStats] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
 
-  // Filter data for this store only
-  const storeProducts = products.filter(p => p.store_name === user?.name || p.store_id === user?.id)
-  
-  // Aggregate orders containing this store's products
-  const storeOrders = orders.filter(order => 
-    order.items.some(item => item.store_id === user?.id || item.store_name === user?.name)
-  )
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const res = await api.get('/store/dashboard')
+        if (res.data.success) {
+          setStats(res.data.data)
+        }
+      } catch (error) {
+        console.error('Failed to fetch stats', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchStats()
+  }, [])
 
-  const totalRevenue = storeOrders.reduce((sum, order) => {
-    const storeItems = order.items.filter(i => i.store_id === user?.id || i.store_name === user?.name)
-    return sum + storeItems.reduce((s, i) => s + (i.price_at_purchase * i.quantity), 0)
-  }, 0)
-
-  const activeProducts = storeProducts.filter(p => p.is_active).length
-  const totalStock = storeProducts.reduce((sum, p) => sum + p.stock, 0)
-  
-  // Mock chart data
-  const revenueData = [
-    { name: 'Senin', revenue: totalRevenue * 0.1 },
-    { name: 'Selasa', revenue: totalRevenue * 0.15 },
-    { name: 'Rabu', revenue: totalRevenue * 0.2 },
-    { name: 'Kamis', revenue: totalRevenue * 0.1 },
-    { name: 'Jumat', revenue: totalRevenue * 0.25 },
-    { name: 'Sabtu', revenue: totalRevenue * 0.15 },
-    { name: 'Minggu', revenue: totalRevenue * 0.05 },
-  ]
-
-  const productData = storeProducts.map(p => ({
-    name: p.name.substring(0, 15) + '...',
-    sales: Math.floor(Math.random() * 50) + 10
-  })).slice(0, 5)
+  if (loading || !stats) {
+    return <div className="p-8 text-center text-muted-foreground">Memuat data dashboard...</div>
+  }
 
   const chartConfig = {
     revenue: {
       label: "Pendapatan",
-      color: "hsl(var(--primary))",
+      color: "var(--primary)",
     },
     sales: {
       label: "Penjualan",
-      color: "hsl(var(--secondary))",
+      color: "var(--secondary)",
     }
   }
 
@@ -63,7 +49,7 @@ export default function StoreDashboard() {
             <DollarSign className="w-4 h-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">Rp {totalRevenue.toLocaleString('id-ID')}</div>
+            <div className="text-2xl font-bold">Rp {stats.totalRevenue.toLocaleString('id-ID')}</div>
             <p className="text-xs text-muted-foreground">+20.1% dari bulan lalu</p>
           </CardContent>
         </Card>
@@ -74,7 +60,7 @@ export default function StoreDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {storeOrders.filter(o => o.status === 'Menunggu' || o.status === 'Dikemas').length}
+              {stats.activeOrders}
             </div>
             <p className="text-xs text-muted-foreground">Pesanan perlu diproses</p>
           </CardContent>
@@ -85,8 +71,8 @@ export default function StoreDashboard() {
             <Package className="w-4 h-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{activeProducts}</div>
-            <p className="text-xs text-muted-foreground">Dari total {storeProducts.length} produk</p>
+            <div className="text-2xl font-bold">{stats.activeProducts}</div>
+            <p className="text-xs text-muted-foreground">Total produk toko Anda</p>
           </CardContent>
         </Card>
         <Card>
@@ -95,7 +81,7 @@ export default function StoreDashboard() {
             <Activity className="w-4 h-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalStock}</div>
+            <div className="text-2xl font-bold">{stats.totalStock}</div>
             <p className="text-xs text-muted-foreground">Pcs tersedia di gudang</p>
           </CardContent>
         </Card>
@@ -110,7 +96,7 @@ export default function StoreDashboard() {
           <CardContent className="pl-2">
             <div className="h-[300px]">
               <ChartContainer config={chartConfig} className="h-full w-full min-h-[250px]">
-                <LineChart data={revenueData}>
+                <LineChart data={stats.revenueData}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--muted-foreground)/0.2)" />
                   <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
                   <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `Rp${value/1000}k`} />
@@ -129,7 +115,7 @@ export default function StoreDashboard() {
           <CardContent>
             <div className="h-[300px]">
               <ChartContainer config={chartConfig} className="h-full w-full min-h-[250px]">
-                <BarChart data={productData} layout="vertical" margin={{ top: 0, right: 0, left: 40, bottom: 0 }}>
+                <BarChart data={stats.productData} layout="vertical" margin={{ top: 0, right: 0, left: 40, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="hsl(var(--muted-foreground)/0.2)" />
                   <XAxis type="number" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
                   <YAxis dataKey="name" type="category" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
