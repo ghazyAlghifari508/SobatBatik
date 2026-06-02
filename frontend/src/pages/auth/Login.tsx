@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/store/useAuthStore'
 import type { Role } from '@/store/useAuthStore'
+import { api } from '@/lib/axios'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -14,19 +15,37 @@ export default function Login() {
   const [role, setRole] = useState<Role>('user')
   const [showPass, setShowPass] = useState(false)
   const [loading, setLoading] = useState(false)
-  const { login } = useAuthStore()
+  const { loginWithData } = useAuthStore()
   const navigate = useNavigate()
+
+  const handleRoleSelect = (selectedRole: Role) => {
+    setRole(selectedRole)
+    setPassword('123456')
+    if (selectedRole === 'admin') setEmail('admin@email.com')
+    else if (selectedRole === 'store') setEmail('penjual@email.com')
+    else setEmail('pembeli@email.com')
+  }
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!email) return
     setLoading(true)
-    await new Promise(r => setTimeout(r, 800))
-    login(email, role)
-    if (role === 'admin') navigate('/admin')
-    else if (role === 'store') navigate('/store')
-    else navigate('/')
-    setLoading(false)
+    
+    try {
+      const res = await api.post('/auth/login', { email, password })
+      if (res.data.success) {
+        loginWithData(res.data.data.user, res.data.data.token)
+        const userRole = res.data.data.user.role
+        if (userRole === 'admin') navigate('/admin')
+        else if (userRole === 'store') navigate('/store')
+        else navigate('/')
+      }
+    } catch (error) {
+      console.error('Login failed:', error)
+      alert('Login gagal. Pastikan API backend berjalan.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -136,7 +155,7 @@ export default function Login() {
                     <button
                       key={value}
                       type="button"
-                      onClick={() => setRole(value)}
+                      onClick={() => handleRoleSelect(value)}
                       className={cn(
                         'flex flex-col items-center gap-1 py-2.5 rounded-xl text-xs font-medium border-2 transition-all',
                         role === value

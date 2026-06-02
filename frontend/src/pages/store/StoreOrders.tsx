@@ -1,5 +1,5 @@
-import { useOrderStore } from '../../store/useOrderStore'
-import type { OrderStatus } from '../../store/useOrderStore'
+import { useEffect, useState } from 'react'
+import { api } from '../../lib/axios'
 import { useAuthStore } from '../../store/useAuthStore'
 import { Card } from '../../components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table'
@@ -10,17 +10,37 @@ import { toast } from 'sonner'
 
 export default function StoreOrders() {
   const { user } = useAuthStore()
-  const { orders, updateOrderStatus } = useOrderStore()
-  
-  // Filter orders that contain items from this store
-  const storeOrders = orders.filter(order => 
-    order.items.some(item => item.store_id === user?.id || item.store_name === user?.name)
-  )
+  const [storeOrders, setStoreOrders] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
 
-  const handleStatusChange = (orderId: string, newStatus: OrderStatus) => {
-    updateOrderStatus(orderId, newStatus)
-    toast.success(`Status pesanan diperbarui menjadi ${newStatus}`)
+  const fetchOrders = async () => {
+    try {
+      const res = await api.get('/orders/store')
+      if (res.data.success) {
+        setStoreOrders(res.data.data)
+      }
+    } catch (error) {
+      toast.error('Gagal memuat pesanan')
+    } finally {
+      setLoading(false)
+    }
   }
+
+  useEffect(() => {
+    fetchOrders()
+  }, [])
+
+  const handleStatusChange = async (orderId: string, newStatus: string) => {
+    try {
+      await api.patch(`/orders/${orderId}/status`, { status: newStatus })
+      toast.success(`Status pesanan diperbarui menjadi ${newStatus}`)
+      fetchOrders()
+    } catch (error) {
+      toast.error('Gagal memperbarui status')
+    }
+  }
+
+  if (loading) return <div className="p-8 text-center">Memuat pesanan...</div>
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -55,8 +75,8 @@ export default function StoreOrders() {
               </TableRow>
             ) : (
               storeOrders.map(order => {
-                const storeItems = order.items.filter(i => i.store_id === user?.id || i.store_name === user?.name)
-                const storeTotal = storeItems.reduce((sum, item) => sum + (item.price_at_purchase * item.quantity), 0)
+                const storeItems = order.items.filter((i: any) => i.store_id === user?.id || i.store_name === user?.name)
+                const storeTotal = storeItems.reduce((sum: any, item: any) => sum + (item.price_at_purchase * item.quantity), 0)
                 
                 return (
                   <TableRow key={order._id}>
@@ -69,8 +89,8 @@ export default function StoreOrders() {
                     </TableCell>
                     <TableCell>
                       <ul className="text-sm space-y-1">
-                        {storeItems.map(item => (
-                          <li key={item._id}>{item.quantity}x {item.name}</li>
+                        {storeItems.map((item: any) => (
+                          <li key={item._id}>{item.quantity}x {item.product_name}</li>
                         ))}
                       </ul>
                     </TableCell>
@@ -84,7 +104,7 @@ export default function StoreOrders() {
                     <TableCell>
                       <Select 
                         value={order.status} 
-                        onValueChange={(val: OrderStatus) => handleStatusChange(order._id, val)}
+                        onValueChange={(val: string) => handleStatusChange(order._id, val)}
                         disabled={order.status === 'Selesai'}
                       >
                         <SelectTrigger className="w-[140px]">

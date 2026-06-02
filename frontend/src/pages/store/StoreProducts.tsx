@@ -1,6 +1,5 @@
-import { useState } from 'react'
-import { useProductStore } from '../../store/useProductStore'
-import { useAuthStore } from '../../store/useAuthStore'
+import { useEffect, useState } from 'react'
+import { api } from '../../lib/axios'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
 import { Label } from '../../components/ui/label'
@@ -13,53 +12,117 @@ import { Plus, Edit, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 
 export default function StoreProducts() {
-  const { user } = useAuthStore()
-  const { products, addProduct, deleteProduct, toggleProductStatus } = useProductStore()
-  
-  const [isAddOpen, setIsAddOpen] = useState(false)
+  const [isOpen, setIsOpen] = useState(false)
+  const [editId, setEditId] = useState<string | null>(null)
+  const [deleteId, setDeleteId] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     name: '', description: '', price: '', stock: '', category: '', origin_region: '', image_urls: ''
   })
 
-  // Filter products by this store
-  const storeProducts = products.filter(p => p.store_id === user?.id || p.store_name === user?.name)
+  const [storeProducts, setStoreProducts] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    
-    addProduct({
-      store_id: user!.id,
-      store_name: user!.name,
-      name: formData.name,
-      description: formData.description,
-      price: parseInt(formData.price),
-      stock: parseInt(formData.stock),
-      category: formData.category,
-      origin_region: formData.origin_region,
-      image_urls: formData.image_urls ? [formData.image_urls] : ['https://images.unsplash.com/photo-1584483758362-e6e23dbcb1eb?w=500&q=80'],
-      rating: 0,
-      reviews_count: 0,
-      material: 'Katun',
-      pattern: 'Batik',
-    })
-
-    toast.success('Produk berhasil ditambahkan!')
-    setIsAddOpen(false)
-    setFormData({ name: '', description: '', price: '', stock: '', category: '', origin_region: '', image_urls: '' })
+  const fetchProducts = async () => {
+    try {
+      const res = await api.get('/products/store')
+      if (res.data.success) {
+        setStoreProducts(res.data.data)
+      }
+    } catch (error) {
+      console.error(error)
+      toast.error('Gagal memuat produk')
+    } finally {
+      setLoading(false)
+    }
   }
+
+  useEffect(() => {
+    fetchProducts()
+  }, [])
+
+  const handleAddClick = () => {
+    setEditId(null)
+    setFormData({ name: '', description: '', price: '', stock: '', category: '', origin_region: '', image_urls: '' })
+    setIsOpen(true)
+  }
+
+  const handleEditClick = (product: any) => {
+    setEditId(product._id)
+    setFormData({
+      name: product.name,
+      description: product.description,
+      price: product.price.toString(),
+      stock: product.stock.toString(),
+      category: product.category,
+      origin_region: product.origin_region,
+      image_urls: product.image_urls?.[0] || ''
+    })
+    setIsOpen(true)
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    try {
+      const payload = {
+        name: formData.name,
+        description: formData.description,
+        price: parseInt(formData.price),
+        stock: parseInt(formData.stock),
+        category: formData.category,
+        origin_region: formData.origin_region,
+        image_urls: formData.image_urls ? [formData.image_urls] : undefined
+      }
+
+      if (editId) {
+        await api.patch(`/products/${editId}`, payload)
+        toast.success('Produk berhasil diperbarui!')
+      } else {
+        await api.post('/products', payload)
+        toast.success('Produk berhasil ditambahkan!')
+      }
+      setIsOpen(false)
+      fetchProducts()
+    } catch (error) {
+      toast.error(`Gagal ${editId ? 'memperbarui' : 'menambah'} produk`)
+    }
+  }
+
+  const confirmDelete = async () => {
+    if (!deleteId) return
+    try {
+      await api.delete(`/products/${deleteId}`)
+      toast.success('Produk dihapus')
+      fetchProducts()
+    } catch (error) {
+      toast.error('Gagal menghapus produk')
+    } finally {
+      setDeleteId(null)
+    }
+  }
+
+  const handleToggleStatus = async (id: string) => {
+    try {
+      await api.patch(`/products/${id}/status`)
+      fetchProducts()
+    } catch (error) {
+      toast.error('Gagal mengubah status produk')
+    }
+  }
+
+  if (loading) return <div className="p-8 text-center">Memuat produk...</div>
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">Produk Saya</h1>
         
-        <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+        <Dialog open={isOpen} onOpenChange={setIsOpen}>
           <DialogTrigger asChild>
-            <Button className="gap-2"><Plus className="w-4 h-4" /> Tambah Produk</Button>
+            <Button onClick={handleAddClick} className="gap-2"><Plus className="w-4 h-4" /> Tambah Produk</Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
-              <DialogTitle>Tambah Produk Baru</DialogTitle>
+              <DialogTitle>{editId ? 'Edit Produk' : 'Tambah Produk Baru'}</DialogTitle>
               <DialogDescription>Masukkan detail produk batik yang ingin Anda jual.</DialogDescription>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4 pt-4">
@@ -98,8 +161,8 @@ export default function StoreProducts() {
                 </div>
               </div>
               <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setIsAddOpen(false)}>Batal</Button>
-                <Button type="submit">Simpan Produk</Button>
+                <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>Batal</Button>
+                <Button type="submit">{editId ? 'Simpan Perubahan' : 'Simpan Produk'}</Button>
               </DialogFooter>
             </form>
           </DialogContent>
@@ -139,7 +202,7 @@ export default function StoreProducts() {
                     <div className="flex items-center gap-2">
                       <Switch 
                         checked={product.is_active} 
-                        onCheckedChange={() => toggleProductStatus(product._id)}
+                        onCheckedChange={() => handleToggleStatus(product._id)}
                       />
                       <span className="text-sm text-muted-foreground">
                         {product.is_active ? 'Aktif' : 'Nonaktif'}
@@ -148,13 +211,10 @@ export default function StoreProducts() {
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-2">
-                      <Button variant="outline" size="icon" className="h-8 w-8">
+                      <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => handleEditClick(product)}>
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <Button variant="outline" size="icon" className="h-8 w-8 text-destructive border-destructive" onClick={() => {
-                        deleteProduct(product._id)
-                        toast.success('Produk dihapus')
-                      }}>
+                      <Button variant="outline" size="icon" className="h-8 w-8 text-destructive border-destructive" onClick={() => setDeleteId(product._id)}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
@@ -165,6 +225,19 @@ export default function StoreProducts() {
           </TableBody>
         </Table>
       </Card>
+
+      <Dialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>Hapus Produk</DialogTitle>
+            <DialogDescription>Apakah Anda yakin ingin menghapus produk ini? Tindakan ini tidak dapat dibatalkan.</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteId(null)}>Batal</Button>
+            <Button variant="destructive" onClick={confirmDelete}>Hapus</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
