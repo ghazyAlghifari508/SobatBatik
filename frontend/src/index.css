@@ -24,10 +24,21 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+
+  /* Extended Batik Palette */
+  --color-maroon: var(--maroon);
+  --color-maroon-foreground: var(--maroon-foreground);
+  --color-gold: var(--gold);
+  --color-gold-foreground: var(--gold-foreground);
+  --color-cream: var(--cream);
+  --color-cream-dark: var(--cream-dark);
+
   --radius-xl: calc(var(--radius) + 4px);
   --radius-lg: var(--radius);
   --radius-md: calc(var(--radius) - 2px);
   --radius-sm: calc(var(--radius) - 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 16px);
 }
 
 :root {
@@ -53,29 +64,31 @@
   --accent-foreground: hsl(25 50% 15%);
   --destructive: hsl(0 84.2% 60.2%);
   --destructive-foreground: hsl(0 0% 98%);
-  --border: hsl(25 20% 80%);
-  --input: hsl(25 20% 80%);
+  --border: hsl(25 20% 82%);
+  --input: hsl(25 20% 82%);
   --ring: hsl(25 76% 31%);
-  --radius: 0.5rem;
+  --radius: 0.625rem;
+
+  /* Extended Batik Tokens */
+  --maroon: hsl(0 65% 30%);
+  --maroon-foreground: hsl(37 34% 96%);
+  --gold: hsl(43 85% 48%);
+  --gold-foreground: hsl(25 50% 12%);
+  --cream: hsl(40 50% 97%);
+  --cream-dark: hsl(37 30% 88%);
 }
 
 .dark {
-  /* Dark mode variants for Batik Palette */
   --background: hsl(25 50% 10%);
   --foreground: hsl(37 34% 94%);
   --card: hsl(25 40% 15%);
   --card-foreground: hsl(37 34% 94%);
   --popover: hsl(25 40% 15%);
   --popover-foreground: hsl(37 34% 94%);
-
-  /* Primary remains brown earth, maybe slightly lighter */
   --primary: hsl(25 60% 45%);
   --primary-foreground: hsl(37 34% 94%);
-
-  /* Secondary remains gold accent */
   --secondary: hsl(43 70% 50%);
   --secondary-foreground: hsl(25 50% 10%);
-
   --muted: hsl(25 40% 20%);
   --muted-foreground: hsl(37 20% 80%);
   --accent: hsl(43 70% 50%);
@@ -85,6 +98,12 @@
   --border: hsl(25 40% 25%);
   --input: hsl(25 40% 25%);
   --ring: hsl(25 60% 45%);
+  --maroon: hsl(0 55% 40%);
+  --maroon-foreground: hsl(37 34% 96%);
+  --gold: hsl(43 75% 55%);
+  --gold-foreground: hsl(25 50% 10%);
+  --cream: hsl(25 40% 18%);
+  --cream-dark: hsl(25 40% 22%);
 }
 
 @layer base {
@@ -95,5 +114,202 @@
   body {
     background-color: var(--background);
     color: var(--foreground);
+    font-family: Geist, ui-sans-serif, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
+}
+
+/* =============================================
+   GLASSMORPHISM UTILITIES
+   ============================================= */
+.glass {
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+.glass-warm {
+  background: rgba(245, 240, 232, 0.7);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  border: 1px solid rgba(212, 160, 23, 0.15);
+}
+
+.glass-dark {
+  background: rgba(25, 12, 6, 0.55);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 8px 32px rgba(139, 69, 19, 0.08);
+}
+
+/* =============================================
+   BATIK PATTERN BACKGROUNDS
+   ============================================= */
+.batik-pattern {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60' viewBox='0 0 60 60'%3E%3Cg fill-rule='evenodd'%3E%3Cg fill='%238B4513' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+}
+
+.batik-pattern-dense {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Cg fill-rule='evenodd'%3E%3Cg fill='%238B4513' fill-opacity='0.06'%3E%3Cpath d='M0 38.59l2.83-2.83 1.41 1.41L1.41 40H0v-1.41zM0 1.4l2.83 2.83 1.41-1.41L1.41 0H0v1.41zM38.59 40l-2.83-2.83 1.41-1.41L40 38.59V40h-1.41zM40 1.41l-2.83 2.83-1.41-1.41L38.59 0H40v1.41zM20 18.6l2.83-2.83 1.41 1.41L21.41 20l2.83 2.83-1.41 1.41L20 21.41l-2.83 2.83-1.41-1.41L18.59 20l-2.83-2.83 1.41-1.41L20 18.59z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+}
+
+.batik-dots {
+  background-image: radial-gradient(circle, hsl(25 76% 31% / 0.07) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* =============================================
+   GRADIENT UTILITIES
+   ============================================= */
+.gradient-batik {
+  background: linear-gradient(135deg, hsl(37 34% 94%) 0%, hsl(43 50% 88%) 50%, hsl(25 30% 82%) 100%);
+}
+
+.gradient-hero {
+  background: linear-gradient(
+    135deg,
+    hsl(25 76% 31%) 0%,
+    hsl(0 65% 30%) 40%,
+    hsl(25 60% 22%) 100%
+  );
+}
+
+.gradient-gold {
+  background: linear-gradient(135deg, hsl(43 85% 48%) 0%, hsl(38 90% 58%) 100%);
+}
+
+.text-gradient-gold {
+  background: linear-gradient(135deg, hsl(43 85% 42%) 0%, hsl(35 80% 55%) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.text-gradient-batik {
+  background: linear-gradient(135deg, hsl(25 76% 31%) 0%, hsl(0 65% 35%) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* =============================================
+   ANIMATION UTILITIES
+   ============================================= */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
+}
+
+@keyframes pulse-soft {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.6s ease-out forwards;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.4s ease-out forwards;
+}
+
+.animate-float {
+  animation: float 4s ease-in-out infinite;
+}
+
+.animate-pulse-soft {
+  animation: pulse-soft 2s ease-in-out infinite;
+}
+
+/* Stagger children animations */
+.stagger-children > * {
+  opacity: 0;
+  animation: fadeInUp 0.5s ease-out forwards;
+}
+.stagger-children > *:nth-child(1) { animation-delay: 0.05s; }
+.stagger-children > *:nth-child(2) { animation-delay: 0.1s; }
+.stagger-children > *:nth-child(3) { animation-delay: 0.15s; }
+.stagger-children > *:nth-child(4) { animation-delay: 0.2s; }
+.stagger-children > *:nth-child(5) { animation-delay: 0.25s; }
+.stagger-children > *:nth-child(6) { animation-delay: 0.3s; }
+.stagger-children > *:nth-child(7) { animation-delay: 0.35s; }
+.stagger-children > *:nth-child(8) { animation-delay: 0.4s; }
+
+/* =============================================
+   CARD HOVER EFFECTS
+   ============================================= */
+.card-hover {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 60px rgba(139, 69, 19, 0.15), 0 4px 16px rgba(139, 69, 19, 0.1);
+}
+
+.card-product:hover .card-image {
+  transform: scale(1.06);
+}
+
+.card-image {
+  transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* =============================================
+   SCROLLBAR STYLING
+   ============================================= */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(37 30% 92%);
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(25 40% 60%);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(25 76% 31%);
+}
+
+/* =============================================
+   SELECTION COLOR
+   ============================================= */
+::selection {
+  background: hsl(25 76% 31% / 0.2);
+  color: hsl(25 76% 31%);
 }

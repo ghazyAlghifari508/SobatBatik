@@ -36,7 +36,11 @@ export default function StoreProducts() {
       stock: parseInt(formData.stock),
       category: formData.category,
       origin_region: formData.origin_region,
-      image_urls: formData.image_urls ? [formData.image_urls] : ['https://images.unsplash.com/photo-1584483758362-e6e23dbcb1eb?w=500&q=80']
+      image_urls: formData.image_urls ? [formData.image_urls] : ['https://images.unsplash.com/photo-1584483758362-e6e23dbcb1eb?w=500&q=80'],
+      rating: 0,
+      reviews_count: 0,
+      material: 'Katun',
+      pattern: 'Batik',
     })
 
     toast.success('Produk berhasil ditambahkan!')
