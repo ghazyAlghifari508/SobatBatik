@@ -1,0 +1,99 @@
+@import "tailwindcss";
+
+@theme inline {
+  --font-sans: Geist, ui-sans-serif, system-ui, sans-serif;
+  --font-serif: serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+}
+
+:root {
+  /* Batik Palette: Cream (#F5F0E8) for background */
+  --background: hsl(37 34% 94%);
+  --foreground: hsl(25 50% 15%);
+  --card: hsl(0 0% 100%);
+  --card-foreground: hsl(25 50% 15%);
+  --popover: hsl(0 0% 100%);
+  --popover-foreground: hsl(25 50% 15%);
+
+  /* Batik Palette: Brown earth (#8B4513) for primary */
+  --primary: hsl(25 76% 31%);
+  --primary-foreground: hsl(37 34% 94%);
+
+  /* Batik Palette: Gold accent (#D4A017) for secondary */
+  --secondary: hsl(43 80% 46%);
+  --secondary-foreground: hsl(25 50% 15%);
+
+  --muted: hsl(37 20% 90%);
+  --muted-foreground: hsl(25 30% 40%);
+  --accent: hsl(43 80% 46%);
+  --accent-foreground: hsl(25 50% 15%);
+  --destructive: hsl(0 84.2% 60.2%);
+  --destructive-foreground: hsl(0 0% 98%);
+  --border: hsl(25 20% 80%);
+  --input: hsl(25 20% 80%);
+  --ring: hsl(25 76% 31%);
+  --radius: 0.5rem;
+}
+
+.dark {
+  /* Dark mode variants for Batik Palette */
+  --background: hsl(25 50% 10%);
+  --foreground: hsl(37 34% 94%);
+  --card: hsl(25 40% 15%);
+  --card-foreground: hsl(37 34% 94%);
+  --popover: hsl(25 40% 15%);
+  --popover-foreground: hsl(37 34% 94%);
+
+  /* Primary remains brown earth, maybe slightly lighter */
+  --primary: hsl(25 60% 45%);
+  --primary-foreground: hsl(37 34% 94%);
+
+  /* Secondary remains gold accent */
+  --secondary: hsl(43 70% 50%);
+  --secondary-foreground: hsl(25 50% 10%);
+
+  --muted: hsl(25 40% 20%);
+  --muted-foreground: hsl(37 20% 80%);
+  --accent: hsl(43 70% 50%);
+  --accent-foreground: hsl(25 50% 10%);
+  --destructive: hsl(0 62.8% 30.6%);
+  --destructive-foreground: hsl(0 0% 98%);
+  --border: hsl(25 40% 25%);
+  --input: hsl(25 40% 25%);
+  --ring: hsl(25 60% 45%);
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+    outline-color: var(--ring);
+  }
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+  }
+}
