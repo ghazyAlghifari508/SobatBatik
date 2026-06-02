@@ -26,9 +26,13 @@ export default function DashboardLayout() {
       {/* Sidebar */}
       <aside className="w-64 border-r bg-background flex flex-col h-screen sticky top-0">
         <div className="h-16 flex items-center px-6 border-b">
-          <Link to="/" className="text-xl font-bold text-primary flex items-center gap-2">
-            <Store className="h-6 w-6" />
-            SobatBatik {user?.role === 'admin' ? 'Admin' : 'Store'}
+          <Link to="/" className="flex items-center gap-3 group">
+            <div className="p-1.5 bg-[#FDFBF7] rounded-xl shadow-sm border border-border/50 transition-transform group-hover:scale-105">
+              <img src="/logo.png" alt="SobatBatik Logo" className="h-8 w-auto mix-blend-multiply" />
+            </div>
+            <span className="text-sm font-semibold text-muted-foreground hidden sm:block">
+              {user?.role === 'admin' ? 'Admin Panel' : 'Store Panel'}
+            </span>
           </Link>
         </div>
         
