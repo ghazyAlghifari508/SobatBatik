@@ -82,7 +82,7 @@ export default function AdminApprovals() {
                         <Button size="sm" variant="outline" className="text-destructive border-destructive hover:bg-destructive/10" onClick={() => handleRejectClick(app._id)}>
                           <X className="w-4 h-4 mr-1" /> Tolak
                         </Button>
-                        <Button size="sm" className="bg-success text-white hover:bg-success/90" onClick={() => handleApprove(app._id)}>
+                        <Button size="sm" className="bg-green-600 text-white hover:bg-success/90" onClick={() => handleApprove(app._id)}>
                           <Check className="w-4 h-4 mr-1" /> Setujui
                         </Button>
                       </div>

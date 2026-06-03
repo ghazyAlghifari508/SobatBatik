@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import MainLayout from './layouts/MainLayout'
 import DashboardLayout from './layouts/DashboardLayout'
+import AdminLayout from './layouts/Administrator/AdminLayout'
 import { useAuthStore } from './store/useAuthStore'
 
 // Public Pages
@@ -93,10 +94,8 @@ export default function App() {
           <Route path="orders" element={<StoreOrders />} />
         </Route>
 
-        {/* Admin Dashboard Routes */}
-        <Route path="/admin" element={
-          <ProtectedRoute allowedRoles={['admin']}><DashboardLayout /></ProtectedRoute>
-        }>
+        {/* Admin Dashboard Routes*/}
+        <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<AdminDashboard />} />
           <Route path="approvals" element={<AdminApprovals />} />
           <Route path="monitoring" element={<AdminMonitoring />} />
