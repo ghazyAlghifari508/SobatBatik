@@ -8,6 +8,40 @@ const generateToken = (id, role) => {
   });
 };
 
+exports.register = async (req, res) => {
+  const { name, email, password } = req.body;
+
+  try {
+    const userExists = await User.findOne({ email });
+    if (userExists) {
+      return res.status(400).json({ success: false, message: 'Email sudah terdaftar', data: null });
+    }
+
+    const user = await User.create({
+      name,
+      email,
+      password_hash: password, // Mongoose pre-save hook di User model biasanya nge-hash ini, tapi mari pastikan
+      role: 'user'
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Registrasi berhasil',
+      data: {
+        token: generateToken(user._id, user.role),
+        user: {
+          id: user._id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+        }
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message, data: null });
+  }
+};
+
 exports.login = async (req, res) => {
   const { email, password } = req.body;
 

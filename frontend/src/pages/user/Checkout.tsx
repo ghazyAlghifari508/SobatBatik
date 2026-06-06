@@ -1,13 +1,16 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { useNavigate, Link } from 'react-router-dom'
 import { useCartStore } from '@/store/useCartStore'
 import { useOrderStore } from '@/store/useOrderStore'
+import { useAuthStore } from '@/store/useAuthStore'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import { CreditCard, Wallet, Banknote, ArrowLeft, ArrowRight, Truck, CheckCircle2, Copy } from 'lucide-react'
 import { shippingMethods, paymentMethods } from '@/data/dummyData'
-import { Check, Loader2, MapPin, Truck, CreditCard } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { Check, Loader2, MapPin } from 'lucide-react'
+import { cn, getImageUrl } from '@/lib/utils'
 import { toast } from 'sonner'
 
 export default function Checkout() {
@@ -302,8 +305,8 @@ export default function Checkout() {
             <div className="space-y-3 max-h-64 overflow-y-auto pr-1">
               {items.map(item => (
                 <div key={item._id} className="flex gap-3">
-                  <div className="w-12 h-12 rounded-lg overflow-hidden bg-muted shrink-0">
-                    <img src={item.image_urls[0]} alt={item.name} className="w-full h-full object-cover" />
+                  <div className="w-12 h-12 rounded-lg overflow-hidden bg-muted shrink-0 border border-border">
+                    <img src={getImageUrl(item.image_urls?.[0])} alt={item.name} className="w-full h-full object-cover" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">{item.name}</p>

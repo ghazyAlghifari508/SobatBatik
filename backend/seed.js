@@ -53,9 +53,9 @@ const seedDatabase = async () => {
       description: 'Batik asli dari Cirebon',
       price: 150000,
       stock: 50,
-      category: 'Pria',
+      category: 'Batik Tulis',
       origin_region: 'Cirebon',
-      image_urls: ['https://source.unsplash.com/random/400x400?batik']
+      image_urls: ['/placeholder-batik-1.jpg']
     });
 
     const p2 = await Product.create({
@@ -65,9 +65,9 @@ const seedDatabase = async () => {
       description: 'Batik parang khas Yogyakarta',
       price: 200000,
       stock: 30,
-      category: 'Wanita',
+      category: 'Batik Cap',
       origin_region: 'Yogyakarta',
-      image_urls: ['https://source.unsplash.com/random/400x400?batik&2']
+      image_urls: ['/placeholder-batik-2.jpg']
     });
 
     // 5. Create an order

@@ -7,17 +7,29 @@ import { Textarea } from '../../components/ui/textarea'
 import { Card } from '../../components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '../../components/ui/dialog'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select'
 import { Switch } from '../../components/ui/switch'
-import { Plus, Edit, Trash2 } from 'lucide-react'
+import { Popover, PopoverContent, PopoverTrigger } from '../../components/ui/popover'
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '../../components/ui/command'
+import { Plus, Edit, Trash2, Check, ChevronsUpDown } from 'lucide-react'
+import { cn, getImageUrl } from '../../lib/utils'
 import { toast } from 'sonner'
+
+const KATEGORI_OPTIONS = ["Batik Cap", "Batik Tulis", "Batik Printing", "Batik Tenun"];
+const DAERAH_OPTIONS = ["Solo", "Yogyakarta", "Pekalongan", "Cirebon", "Madura", "Lasem", "Garut", "Tasikmalaya", "Betawi", "Bali", "Papua", "Kalimantan", "Palembang", "Minangkabau"];
 
 export default function StoreProducts() {
   const [isOpen, setIsOpen] = useState(false)
   const [editId, setEditId] = useState<string | null>(null)
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [formData, setFormData] = useState({
-    name: '', description: '', price: '', stock: '', category: '', origin_region: '', image_urls: ''
+    name: '', description: '', price: '', category: '', origin_region: '', image_urls: ''
   })
+  const [sizes, setSizes] = useState({ S: 0, M: 0, L: 0, XL: 0 })
+  const [imageFile, setImageFile] = useState<File | null>(null)
+  
+  const [openKategori, setOpenKategori] = useState(false)
+  const [openDaerah, setOpenDaerah] = useState(false)
 
   const [storeProducts, setStoreProducts] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -42,7 +54,9 @@ export default function StoreProducts() {
 
   const handleAddClick = () => {
     setEditId(null)
-    setFormData({ name: '', description: '', price: '', stock: '', category: '', origin_region: '', image_urls: '' })
+    setFormData({ name: '', description: '', price: '', category: '', origin_region: '', image_urls: '' })
+    setSizes({ S: 0, M: 0, L: 0, XL: 0 })
+    setImageFile(null)
     setIsOpen(true)
   }
 
@@ -52,32 +66,39 @@ export default function StoreProducts() {
       name: product.name,
       description: product.description,
       price: product.price.toString(),
-      stock: product.stock.toString(),
       category: product.category,
       origin_region: product.origin_region,
       image_urls: product.image_urls?.[0] || ''
     })
+    setSizes(product.sizes || { S: 0, M: 0, L: 0, XL: 0 })
+    setImageFile(null)
     setIsOpen(true)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
-      const payload = {
-        name: formData.name,
-        description: formData.description,
-        price: parseInt(formData.price),
-        stock: parseInt(formData.stock),
-        category: formData.category,
-        origin_region: formData.origin_region,
-        image_urls: formData.image_urls ? [formData.image_urls] : undefined
+      const payload = new FormData();
+      payload.append('name', formData.name);
+      payload.append('description', formData.description);
+      payload.append('price', parseInt(formData.price.replace(/\D/g, '') || '0').toString());
+      payload.append('sizes', JSON.stringify(sizes));
+      payload.append('category', formData.category);
+      payload.append('origin_region', formData.origin_region);
+      
+      if (imageFile) {
+        payload.append('image', imageFile);
       }
 
       if (editId) {
-        await api.patch(`/products/${editId}`, payload)
+        await api.patch(`/products/${editId}`, payload, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        })
         toast.success('Produk berhasil diperbarui!')
       } else {
-        await api.post('/products', payload)
+        await api.post('/products', payload, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        })
         toast.success('Produk berhasil ditambahkan!')
       }
       setIsOpen(false)
@@ -134,26 +155,112 @@ export default function StoreProducts() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Harga (Rp)</Label>
-                    <Input type="number" value={formData.price} onChange={e => setFormData({...formData, price: e.target.value})} required />
+                    <Input type="text" placeholder="Contoh: Rp 50.000" value={formData.price} onChange={e => setFormData({...formData, price: e.target.value})} required />
                   </div>
                   <div className="space-y-2">
-                    <Label>Stok Awal</Label>
-                    <Input type="number" value={formData.stock} onChange={e => setFormData({...formData, stock: e.target.value})} required />
+                    <Label>Stok per Ukuran</Label>
+                    <div className="flex gap-2">
+                      {['S', 'M', 'L', 'XL'].map((size) => (
+                        <div key={size} className="flex flex-col gap-1 w-full">
+                          <Label className="text-[10px] text-muted-foreground text-center">{size}</Label>
+                          <Input 
+                            type="number" 
+                            min="0"
+                            className="px-1 text-center"
+                            value={sizes[size as keyof typeof sizes]} 
+                            onChange={e => setSizes({...sizes, [size]: parseInt(e.target.value) || 0})} 
+                          />
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Kategori</Label>
-                    <Input value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})} required />
+                    <Popover open={openKategori} onOpenChange={setOpenKategori}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={openKategori}
+                          className="w-full justify-between font-normal"
+                        >
+                          {formData.category || "Pilih Kategori..."}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                        <Command>
+                          <CommandInput placeholder="Cari kategori..." />
+                          <CommandList>
+                            <CommandEmpty>Kategori tidak ditemukan.</CommandEmpty>
+                            <CommandGroup>
+                              {KATEGORI_OPTIONS.map((kategori) => (
+                                <CommandItem
+                                  key={kategori}
+                                  value={kategori}
+                                  onSelect={() => {
+                                    setFormData({ ...formData, category: kategori })
+                                    setOpenKategori(false)
+                                  }}
+                                >
+                                  <Check className={cn("mr-2 h-4 w-4", formData.category === kategori ? "opacity-100" : "opacity-0")} />
+                                  {kategori}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
                   </div>
                   <div className="space-y-2">
-                    <Label>Asal Daerah</Label>
-                    <Input value={formData.origin_region} onChange={e => setFormData({...formData, origin_region: e.target.value})} required />
+                    <Label>Khas Daerah</Label>
+                    <Popover open={openDaerah} onOpenChange={setOpenDaerah}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={openDaerah}
+                          className="w-full justify-between font-normal"
+                        >
+                          {formData.origin_region || "Pilih Daerah..."}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                        <Command>
+                          <CommandInput placeholder="Cari daerah..." />
+                          <CommandList>
+                            <CommandEmpty>Daerah tidak ditemukan.</CommandEmpty>
+                            <CommandGroup>
+                              {DAERAH_OPTIONS.map((daerah) => (
+                                <CommandItem
+                                  key={daerah}
+                                  value={daerah}
+                                  onSelect={() => {
+                                    setFormData({ ...formData, origin_region: daerah })
+                                    setOpenDaerah(false)
+                                  }}
+                                >
+                                  <Check className={cn("mr-2 h-4 w-4", formData.origin_region === daerah ? "opacity-100" : "opacity-0")} />
+                                  {daerah}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label>URL Gambar</Label>
-                  <Input placeholder="https://..." value={formData.image_urls} onChange={e => setFormData({...formData, image_urls: e.target.value})} />
+                  <Label>Foto Produk</Label>
+                  <Input type="file" accept="image/*" onChange={e => setImageFile(e.target.files?.[0] || null)} required={!editId} />
+                  {editId && formData.image_urls && !imageFile && (
+                    <p className="text-sm text-muted-foreground mt-1">Biarkan kosong jika tidak ingin mengubah foto.</p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label>Deskripsi</Label>
@@ -191,7 +298,11 @@ export default function StoreProducts() {
                 <TableRow key={product._id}>
                   <TableCell className="font-medium">
                     <div className="flex items-center gap-3">
-                      <img src={product.image_urls[0]} alt="" className="w-10 h-10 rounded object-cover bg-muted" />
+                      <img 
+                        src={getImageUrl(product.image_urls?.[0])} 
+                        alt="" 
+                        className="w-10 h-10 rounded object-cover bg-muted" 
+                      />
                       {product.name}
                     </div>
                   </TableCell>

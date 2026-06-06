@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import ProductCard from '@/components/ProductCard'
 import { useProductStore } from '@/store/useProductStore'
 import { categories, testimonials } from '@/data/dummyData'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 function StarRating({ rating }: { rating: number }) {
   return (
@@ -17,8 +17,12 @@ function StarRating({ rating }: { rating: number }) {
 }
 
 export default function Home() {
-  const { products } = useProductStore()
+  const { products, fetchPublicProducts } = useProductStore()
   const [email, setEmail] = useState('')
+
+  useEffect(() => {
+    fetchPublicProducts()
+  }, [fetchPublicProducts])
 
   const featuredProducts = products.filter(p => p.is_active && p.is_featured).slice(0, 4)
   const newProducts = products.filter(p => p.is_active && p.is_new).slice(0, 4)

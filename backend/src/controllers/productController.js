@@ -1,6 +1,16 @@
 const Product = require('../models/Product');
 const Store = require('../models/Store');
 
+// GET /api/v1/products (Public)
+exports.getAllProducts = async (req, res) => {
+  try {
+    const products = await Product.find({ is_active: true }).sort({ created_at: -1 });
+    res.json({ success: true, message: 'Products fetched', data: products });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message, data: null });
+  }
+};
+
 // GET /api/v1/products/store
 exports.getStoreProducts = async (req, res) => {
   try {
@@ -20,8 +30,26 @@ exports.createProduct = async (req, res) => {
     const store = await Store.findOne({ owner_id: req.user._id });
     if (!store) return res.status(404).json({ success: false, message: 'Store not found', data: null });
 
-    const { name, description, price, stock, category, origin_region } = req.body;
+    const { name, description, price, category, origin_region } = req.body;
+    let sizes = { S: 0, M: 0, L: 0, XL: 0 };
+    if (req.body.sizes) {
+      try {
+        sizes = typeof req.body.sizes === 'string' ? JSON.parse(req.body.sizes) : req.body.sizes;
+      } catch (e) {
+        console.error('Error parsing sizes:', e);
+      }
+    }
     
+    // Total stock is sum of sizes
+    const stock = (Number(sizes.S) || 0) + (Number(sizes.M) || 0) + (Number(sizes.L) || 0) + (Number(sizes.XL) || 0);
+    
+    let image_urls = [];
+    if (req.file) {
+      image_urls = [`/uploads/${req.file.filename}`];
+    } else {
+      image_urls = [`https://source.unsplash.com/random/400x400?batik&sig=${Math.random()}`];
+    }
+
     const product = await Product.create({
       store_id: store._id,
       store_name: store.store_name,
@@ -29,9 +57,10 @@ exports.createProduct = async (req, res) => {
       description,
       price,
       stock,
+      sizes,
       category,
       origin_region,
-      image_urls: [`https://source.unsplash.com/random/400x400?batik&sig=${Math.random()}`]
+      image_urls
     });
 
     res.status(201).json({ success: true, message: 'Product created', data: product });
@@ -44,9 +73,25 @@ exports.createProduct = async (req, res) => {
 exports.updateProduct = async (req, res) => {
   try {
     const store = await Store.findOne({ owner_id: req.user._id });
+    
+    let updateData = { ...req.body };
+    if (req.file) {
+      updateData.image_urls = [`/uploads/${req.file.filename}`];
+    }
+    
+    if (updateData.sizes) {
+      try {
+        const sizesObj = typeof updateData.sizes === 'string' ? JSON.parse(updateData.sizes) : updateData.sizes;
+        updateData.sizes = sizesObj;
+        updateData.stock = (Number(sizesObj.S) || 0) + (Number(sizesObj.M) || 0) + (Number(sizesObj.L) || 0) + (Number(sizesObj.XL) || 0);
+      } catch (e) {
+        console.error('Error parsing sizes:', e);
+      }
+    }
+
     const product = await Product.findOneAndUpdate(
       { _id: req.params.id, store_id: store._id },
-      req.body,
+      updateData,
       { new: true }
     );
 

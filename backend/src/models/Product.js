@@ -6,7 +6,13 @@ const productSchema = new mongoose.Schema({
   name: { type: String, required: true },
   description: { type: String, required: true },
   price: { type: Number, required: true, min: 0 },
-  stock: { type: Number, required: true, min: 0 },
+  sizes: {
+    S: { type: Number, default: 0, min: 0 },
+    M: { type: Number, default: 0, min: 0 },
+    L: { type: Number, default: 0, min: 0 },
+    XL: { type: Number, default: 0, min: 0 }
+  },
+  stock: { type: Number, required: true, min: 0 }, // Will be sum of sizes
   category: { type: String, required: true },
   origin_region: { type: String, required: true },
   image_urls: [{ type: String }],
