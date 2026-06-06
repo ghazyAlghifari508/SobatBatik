@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useProductStore } from '@/store/useProductStore'
 import { useCartStore } from '@/store/useCartStore'
@@ -7,16 +7,22 @@ import { Badge } from '@/components/ui/badge'
 import ProductCard from '@/components/ProductCard'
 import {
   ShoppingCart, Store, Star, Minus, Plus,
-  Heart, Share2, Shield, Truck, PackageX
+  Heart, Share2, Shield, Truck, PackageX, Loader2
 } from 'lucide-react'
 import { toast } from 'sonner'
-import { cn } from '@/lib/utils'
+import { cn, getImageUrl } from '@/lib/utils'
 
 export default function ProductDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { products } = useProductStore()
+  const { products, loading, fetchPublicProducts } = useProductStore()
   const { addItem } = useCartStore()
+
+  useEffect(() => {
+    if (products.length === 0) {
+      fetchPublicProducts()
+    }
+  }, [products.length, fetchPublicProducts])
 
   const product = products.find(p => p._id === id)
 
@@ -24,6 +30,15 @@ export default function ProductDetail() {
   const [quantity, setQuantity] = useState(1)
   const [wishlisted, setWishlisted] = useState(false)
   const [selectedSize, setSelectedSize] = useState('M')
+
+  if (loading && !product) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[50vh] text-muted-foreground">
+        <Loader2 className="h-10 w-10 animate-spin mb-4" />
+        <p>Memuat detail produk...</p>
+      </div>
+    )
+  }
 
   if (!product) {
     return (
@@ -76,7 +91,7 @@ export default function ProductDetail() {
           {/* Main Image */}
           <div className="relative aspect-square rounded-3xl overflow-hidden bg-muted group">
             <img
-              src={product.image_urls[activeImage] || product.image_urls[0]}
+              src={getImageUrl(product.image_urls?.[activeImage] || product.image_urls?.[0])}
               alt={product.name}
               className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
             />
@@ -95,7 +110,7 @@ export default function ProductDetail() {
           </div>
 
           {/* Thumbnails */}
-          {product.image_urls.length > 1 && (
+          {product.image_urls && product.image_urls.length > 1 && (
             <div className="flex gap-3">
               {product.image_urls.map((url, i) => (
                 <button
@@ -106,7 +121,7 @@ export default function ProductDetail() {
                     activeImage === i ? 'border-primary shadow-md' : 'border-transparent opacity-60 hover:opacity-100'
                   )}
                 >
-                  <img src={url} alt={`View ${i + 1}`} className="w-full h-full object-cover" />
+                  <img src={getImageUrl(url)} alt={`View ${i + 1}`} className="w-full h-full object-cover" />
                 </button>
               ))}
             </div>
@@ -138,15 +153,15 @@ export default function ProductDetail() {
                   key={i}
                   className={cn(
                     'h-4 w-4',
-                    i < Math.floor(product.rating)
+                    i < Math.floor(product.rating || 0)
                       ? 'fill-[hsl(43_85%_48%)] text-[hsl(43_85%_48%)]'
                       : 'text-muted-foreground/30'
                   )}
                 />
               ))}
             </div>
-            <span className="font-semibold text-foreground">{product.rating.toFixed(1)}</span>
-            <span className="text-muted-foreground text-sm">({product.reviews_count} ulasan)</span>
+            <span className="font-semibold text-foreground">{(product.rating || 0).toFixed(1)}</span>
+            <span className="text-muted-foreground text-sm">({product.reviews_count || 0} ulasan)</span>
           </div>
 
           {/* Price */}
@@ -305,11 +320,11 @@ export default function ProductDetail() {
           <div className="flex items-center gap-2">
             <div className="flex">
               {[...Array(5)].map((_, i) => (
-                <Star key={i} className={cn('h-4 w-4', i < Math.floor(product.rating) ? 'fill-[hsl(43_85%_48%)] text-[hsl(43_85%_48%)]' : 'text-muted-foreground/30')} />
+                <Star key={i} className={cn('h-4 w-4', i < Math.floor(product.rating || 0) ? 'fill-[hsl(43_85%_48%)] text-[hsl(43_85%_48%)]' : 'text-muted-foreground/30')} />
               ))}
             </div>
-            <span className="font-bold">{product.rating.toFixed(1)}</span>
-            <span className="text-muted-foreground text-sm">dari {product.reviews_count} ulasan</span>
+            <span className="font-bold">{(product.rating || 0).toFixed(1)}</span>
+            <span className="text-muted-foreground text-sm">dari {product.reviews_count || 0} ulasan</span>
           </div>
         </div>
         <div className="space-y-4">

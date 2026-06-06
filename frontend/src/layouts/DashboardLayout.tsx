@@ -68,13 +68,10 @@ export default function DashboardLayout() {
 
       {/* Main Content */}
       <main className="flex-1 overflow-auto">
-        <header className="h-16 border-b bg-background flex items-center px-8 justify-between">
+        <header className="h-16 border-b bg-background flex items-center px-8">
           <h1 className="text-lg font-semibold">
             {links.find(l => l.href === location.pathname)?.label || 'Dashboard'}
           </h1>
-          <Link to="/">
-            <Button variant="outline" size="sm">Kembali ke Publik</Button>
-          </Link>
         </header>
         <div className="p-8">
           <Outlet />

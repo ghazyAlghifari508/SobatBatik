@@ -1,15 +1,19 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { Heart, ShoppingCart, Trash2, Star } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useProductStore } from '@/store/useProductStore'
 import { useCartStore } from '@/store/useCartStore'
 import { toast } from 'sonner'
-import { cn } from '@/lib/utils'
+import { cn, getImageUrl } from '@/lib/utils'
 
 export default function Wishlist() {
-  const { products } = useProductStore()
+  const { products, fetchPublicProducts } = useProductStore()
   const { addItem } = useCartStore()
+
+  useEffect(() => {
+    if (products.length === 0) fetchPublicProducts()
+  }, [products.length, fetchPublicProducts])
 
   // Static wishlist — seeded with some products
   const [wishlistIds, setWishlistIds] = useState<string[]>(['p1', 'p4', 'p7', 'p8', 'p10'])
@@ -69,7 +73,7 @@ export default function Wishlist() {
               {/* Image */}
               <Link to={`/product/${product._id}`} className="block relative aspect-[4/3] overflow-hidden">
                 <img
-                  src={product.image_urls[0]}
+                  src={getImageUrl(product.image_urls?.[0])}
                   alt={product.name}
                   className="w-full h-full object-cover card-image"
                 />
@@ -99,13 +103,13 @@ export default function Wishlist() {
                   <div className="flex">
                     {[...Array(5)].map((_, i) => (
                       <Star key={i} className={cn('h-3 w-3',
-                        i < Math.floor(product.rating)
+                        i < Math.floor(product.rating || 0)
                           ? 'fill-[hsl(43_85%_48%)] text-[hsl(43_85%_48%)]'
                           : 'text-muted-foreground/30'
                       )} />
                     ))}
                   </div>
-                  <span className="text-xs text-muted-foreground">({product.reviews_count})</span>
+                  <span className="text-xs text-muted-foreground">({product.reviews_count || 0})</span>
                 </div>
 
                 {/* Price */}

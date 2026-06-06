@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { ShoppingCart, Heart, Star, Eye, AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { cn } from '@/lib/utils'
+import { cn, getImageUrl } from '@/lib/utils'
 import type { Product } from '@/store/useProductStore'
 import { useCartStore } from '@/store/useCartStore'
 import { toast } from 'sonner'
@@ -55,7 +55,7 @@ export default function ProductCard({ product, className }: ProductCardProps) {
           <div className="absolute inset-0 bg-muted animate-pulse" />
         )}
         <img
-          src={product.image_urls[0]}
+          src={getImageUrl(product.image_urls?.[0])}
           alt={product.name}
           loading="lazy"
           onLoad={() => setImageLoaded(true)}
@@ -137,15 +137,15 @@ export default function ProductCard({ product, className }: ProductCardProps) {
                 key={i}
                 className={cn(
                   'h-3 w-3',
-                  i < Math.floor(product.rating)
+                  i < Math.floor(product.rating || 0)
                     ? 'fill-[hsl(43_85%_48%)] text-[hsl(43_85%_48%)]'
                     : 'text-muted-foreground/30'
                 )}
               />
             ))}
           </div>
-          <span className="text-xs font-medium text-foreground">{product.rating.toFixed(1)}</span>
-          <span className="text-xs text-muted-foreground">({product.reviews_count})</span>
+          <span className="text-xs font-medium text-foreground">{(product.rating || 0).toFixed(1)}</span>
+          <span className="text-xs text-muted-foreground">({product.reviews_count || 0})</span>
         </div>
 
         {/* Price + Cart Button */}

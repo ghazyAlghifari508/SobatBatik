@@ -8,10 +8,14 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+const path = require('path');
+
 const authRoutes = require('./routes/authRoutes');
 const productRoutes = require('./routes/productRoutes');
 const orderRoutes = require('./routes/orderRoutes');
 const storeRoutes = require('./routes/storeRoutes');
+
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/products', productRoutes);

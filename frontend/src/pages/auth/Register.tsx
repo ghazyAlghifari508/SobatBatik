@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/store/useAuthStore'
+import { api } from '@/lib/axios'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -17,7 +18,7 @@ export default function Register() {
   const [showConfirm, setShowConfirm] = useState(false)
   const [loading, setLoading] = useState(false)
   const [agreed, setAgreed] = useState(false)
-  const { login } = useAuthStore()
+  const { loginWithData } = useAuthStore()
   const navigate = useNavigate()
 
   const passwordMatch = password && confirm && password === confirm
@@ -27,10 +28,26 @@ export default function Register() {
     e.preventDefault()
     if (!agreed) return
     setLoading(true)
-    await new Promise(r => setTimeout(r, 1000))
-    login(email, 'user')
-    navigate('/')
-    setLoading(false)
+    
+    try {
+      // Panggil API register ke backend
+      const res = await api.post('/auth/register', { 
+        name, 
+        email, 
+        password 
+      })
+      
+      if (res.data.success) {
+        // Setelah berhasil daftar, langsung login dan set token/user data
+        loginWithData(res.data.data.user, res.data.data.token)
+        navigate('/')
+      }
+    } catch (error: any) {
+      console.error('Register failed:', error)
+      alert(error.response?.data?.message || 'Registrasi gagal. Pastikan API backend berjalan.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (

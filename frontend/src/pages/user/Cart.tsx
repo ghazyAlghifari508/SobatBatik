@@ -2,7 +2,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useCartStore } from '@/store/useCartStore'
 import { Button } from '@/components/ui/button'
 import { Minus, Plus, Trash2, ArrowRight, ShoppingBag, Tag, Gift, Lock, Truck, RotateCcw } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn, getImageUrl } from '@/lib/utils'
 
 export default function Cart() {
   const { items, updateQuantity, removeItem } = useCartStore()
@@ -49,7 +49,7 @@ export default function Cart() {
               <Link to={`/product/${item._id}`} className="shrink-0">
                 <div className="w-full sm:w-24 h-40 sm:h-24 rounded-xl overflow-hidden bg-muted">
                   <img
-                    src={item.image_urls[0]}
+                    src={getImageUrl(item.image_urls?.[0])}
                     alt={item.name}
                     className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
                   />

@@ -1,6 +1,6 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Search, SlidersHorizontal, ChevronDown, X, Star, SearchX } from 'lucide-react'
+import { Search, SlidersHorizontal, ChevronDown, X, Star, SearchX, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import ProductCard from '@/components/ProductCard'
@@ -18,8 +18,12 @@ const priceRanges = [
 const ITEMS_PER_PAGE = 8
 
 export default function Shop() {
-  const { products } = useProductStore()
+  const { products, loading, fetchPublicProducts } = useProductStore()
   const [searchParams] = useSearchParams()
+
+  useEffect(() => {
+    fetchPublicProducts()
+  }, [fetchPublicProducts])
 
   const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '')
   const [selectedCategory, setSelectedCategory] = useState(searchParams.get('category') || 'Semua Kategori')
@@ -296,7 +300,12 @@ export default function Shop() {
           )}
 
           {/* Results */}
-          {filtered.length === 0 ? (
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+              <Loader2 className="h-10 w-10 animate-spin mb-4" />
+              <p>Memuat produk...</p>
+            </div>
+          ) : filtered.length === 0 ? (
             <div className="text-center py-20 glass-card rounded-2xl">
               <SearchX className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-xl font-bold mb-2">Produk tidak ditemukan</h3>
