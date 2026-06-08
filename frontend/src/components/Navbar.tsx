@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/store/useAuthStore'
 import { useCartStore } from '@/store/useCartStore'
+import type { Product } from '@/store/useProductStore'
 import {
-  ShoppingCart, Heart, Search, User, LogOut, Menu, X,
-  ChevronDown, Store, LayoutDashboard, Package
+  ShoppingCart, Search, User, LogOut, Menu, X,
+  ChevronDown, LayoutDashboard, Package, TrendingUp
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -32,6 +33,9 @@ export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const [suggestions, setSuggestions] = useState<Product[]>([])
+  const [suggestLoading, setSuggestLoading] = useState(false)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20)
@@ -41,7 +45,47 @@ export default function Navbar() {
 
   useEffect(() => {
     setMobileOpen(false)
+    // Close search on navigation
+    setSearchOpen(false)
+    setSearchQuery('')
+    setSuggestions([])
   }, [location.pathname])
+
+  // Close on Escape key
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setSearchOpen(false)
+        setSearchQuery('')
+        setSuggestions([])
+      }
+    }
+    if (searchOpen) window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [searchOpen])
+
+  // Live suggestions with debounce
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    if (!searchQuery.trim() || searchQuery.trim().length < 2) {
+      setSuggestions([])
+      return
+    }
+    debounceRef.current = setTimeout(async () => {
+      setSuggestLoading(true)
+      try {
+        // Fetch suggestions via API directly (not polluting main store)
+        const { api } = await import('@/lib/axios')
+        const res = await api.get(`/products?search=${encodeURIComponent(searchQuery.trim())}&limit=5`)
+        if (res.data.success) setSuggestions(res.data.data)
+      } catch {
+        setSuggestions([])
+      } finally {
+        setSuggestLoading(false)
+      }
+    }, 350)
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
+  }, [searchQuery])
 
   const cartCount = items.reduce((sum, item) => sum + item.quantity, 0)
   const isActive = (to: string) =>
@@ -53,8 +97,18 @@ export default function Navbar() {
       navigate(`/shop?search=${encodeURIComponent(searchQuery.trim())}`)
       setSearchOpen(false)
       setSearchQuery('')
+      setSuggestions([])
     }
   }
+
+  const handleSuggestionClick = (product: Product) => {
+    navigate(`/product/${product._id}`)
+    setSearchOpen(false)
+    setSearchQuery('')
+    setSuggestions([])
+  }
+
+  const popularSearches = ['Batik Solo', 'Batik Mega Mendung', 'Batik Jogja', 'Kain Batik Tulis']
 
   return (
     <>
@@ -111,17 +165,7 @@ export default function Navbar() {
                 <Search className="h-4.5 w-4.5" />
               </Button>
 
-              {/* Wishlist */}
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-9 w-9 rounded-xl text-foreground/70 hover:text-primary"
-                asChild
-              >
-                <Link to="/wishlist" aria-label="Wishlist">
-                  <Heart className="h-4.5 w-4.5" />
-                </Link>
-              </Button>
+
 
               {/* Cart */}
               <Button
@@ -172,11 +216,6 @@ export default function Navbar() {
                         <DropdownMenuItem asChild className="rounded-xl cursor-pointer">
                           <Link to="/user/orders" className="flex items-center gap-2.5">
                             <Package className="h-4 w-4" /> Pesanan Saya
-                          </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem asChild className="rounded-xl cursor-pointer">
-                          <Link to="/user/apply-store" className="flex items-center gap-2.5">
-                            <Store className="h-4 w-4" /> Daftar Jadi Penjual
                           </Link>
                         </DropdownMenuItem>
                       </>
@@ -258,29 +297,111 @@ export default function Navbar() {
       {/* Search Modal */}
       {searchOpen && (
         <div
-          className="fixed inset-0 z-[60] flex items-start justify-center pt-24 px-4"
-          onClick={() => setSearchOpen(false)}
+          className="fixed inset-0 z-[60] flex items-start justify-center pt-20 px-4"
+          onClick={() => { setSearchOpen(false); setSearchQuery(''); setSuggestions([]) }}
         >
           <div className="absolute inset-0 bg-foreground/20 backdrop-blur-sm" />
           <div
-            className="relative w-full max-w-xl glass-card rounded-2xl shadow-2xl p-2 animate-fade-in-up"
+            className="relative w-full max-w-xl animate-fade-in-up"
             onClick={(e) => e.stopPropagation()}
           >
-            <form onSubmit={handleSearch} className="flex items-center gap-3 px-2">
-              <Search className="h-5 w-5 text-muted-foreground shrink-0" />
-              <input
-                autoFocus
-                type="text"
-                placeholder="Cari batik, motif, atau daerah asal..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground py-3"
-                id="navbar-search-input"
-              />
-              <Button type="submit" size="sm" className="rounded-xl">Cari</Button>
-            </form>
-            <div className="px-4 pb-3 pt-1">
-              <p className="text-xs text-muted-foreground">Tekan Esc untuk menutup</p>
+            {/* Search input */}
+            <div className="glass-card rounded-2xl shadow-2xl">
+              <form onSubmit={handleSearch} className="flex items-center gap-3 px-4 py-3">
+                <Search className="h-5 w-5 text-muted-foreground shrink-0" />
+                <input
+                  autoFocus
+                  type="text"
+                  placeholder="Cari batik, motif, daerah asal, atau nama toko..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground py-1"
+                  id="navbar-search-input"
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => { setSearchQuery(''); setSuggestions([]) }}
+                    className="text-muted-foreground hover:text-foreground shrink-0"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+                <Button type="submit" size="sm" className="rounded-xl shrink-0">Cari</Button>
+              </form>
+
+              {/* Live suggestions */}
+              {searchQuery.trim().length >= 2 && (
+                <div className="border-t border-border/50">
+                  {suggestLoading ? (
+                    <div className="flex items-center gap-2 px-4 py-3 text-sm text-muted-foreground">
+                      <span className="h-4 w-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+                      Mencari...
+                    </div>
+                  ) : suggestions.length > 0 ? (
+                    <ul className="py-1">
+                      {suggestions.map((product) => (
+                        <li key={product._id}>
+                          <button
+                            className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-muted/60 transition-colors text-left"
+                            onClick={() => handleSuggestionClick(product)}
+                          >
+                            <img
+                              src={product.image_urls?.[0] || 'https://via.placeholder.com/40x40?text=B'}
+                              alt={product.name}
+                              className="w-10 h-10 rounded-lg object-cover shrink-0 border border-border/50"
+                              onError={(e) => { (e.target as HTMLImageElement).src = 'https://via.placeholder.com/40x40?text=B' }}
+                            />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-foreground truncate">{product.name}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {product.store_name} · {product.origin_region}
+                              </p>
+                            </div>
+                            <span className="text-sm font-semibold text-primary shrink-0">
+                              Rp {product.price.toLocaleString('id-ID')}
+                            </span>
+                          </button>
+                        </li>
+                      ))}
+                      <li className="px-4 py-2 border-t border-border/30">
+                        <button
+                          className="text-xs text-primary hover:underline flex items-center gap-1"
+                          onClick={handleSearch as unknown as React.MouseEventHandler}
+                        >
+                          <Search className="h-3 w-3" />
+                          Lihat semua hasil untuk "{searchQuery}"
+                        </button>
+                      </li>
+                    </ul>
+                  ) : (
+                    <div className="px-4 py-3 text-sm text-muted-foreground">
+                      Tidak ada produk ditemukan untuk "{searchQuery}"
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Popular searches (shown when query is empty) */}
+              {!searchQuery.trim() && (
+                <div className="border-t border-border/50 px-4 py-3">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-1.5">
+                    <TrendingUp className="h-3 w-3" /> Pencarian Populer
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {popularSearches.map(term => (
+                      <button
+                        key={term}
+                        onClick={() => { setSearchQuery(term) }}
+                        className="text-xs px-3 py-1.5 rounded-full border border-border bg-muted/50 hover:bg-muted hover:border-primary/50 transition-colors text-foreground/70 hover:text-foreground"
+                      >
+                        {term}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-3">Tekan Esc untuk menutup</p>
+                </div>
+              )}
             </div>
           </div>
         </div>

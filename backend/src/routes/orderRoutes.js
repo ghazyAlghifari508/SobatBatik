@@ -1,12 +1,16 @@
 const express = require('express');
-const { getStoreOrders, updateOrderStatus } = require('../controllers/orderController');
+const { getStoreOrders, updateOrderStatus, createOrder, getMyOrders, simulatePayment } = require('../controllers/orderController');
 const { protect, authorize } = require('../middlewares/authMiddleware');
 
 const router = express.Router();
 
-router.use(protect, authorize('store'));
+router.use(protect);
 
-router.get('/store', getStoreOrders);
-router.patch('/:id/status', updateOrderStatus);
+router.post('/', createOrder);
+router.get('/my', getMyOrders);
+router.patch('/:id/pay', simulatePayment);
+
+router.get('/store', authorize('store'), getStoreOrders);
+router.patch('/:id/status', authorize('store'), updateOrderStatus);
 
 module.exports = router;

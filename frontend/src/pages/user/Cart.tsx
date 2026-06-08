@@ -42,7 +42,7 @@ export default function Cart() {
         <div className="lg:col-span-2 space-y-4">
           {items.map((item) => (
             <div
-              key={item._id}
+              key={item.cartItemId}
               className="glass-card rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row gap-4"
             >
               {/* Image */}
@@ -66,10 +66,13 @@ export default function Cart() {
                         {item.name}
                       </h3>
                     </Link>
-                    <p className="text-xs text-muted-foreground mt-1">{item.origin_region} · {item.category}</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {item.origin_region} · {item.category}
+                      {item.selectedSize ? ` · Ukuran: ${item.selectedSize}` : ''}
+                    </p>
                   </div>
                   <button
-                    onClick={() => removeItem(item._id)}
+                    onClick={() => removeItem(item.cartItemId)}
                     aria-label="Hapus item"
                     className="text-muted-foreground hover:text-destructive transition-colors p-1 self-start"
                   >
@@ -81,7 +84,7 @@ export default function Cart() {
                   {/* Quantity */}
                   <div className="flex items-center gap-1 rounded-xl border border-border w-fit overflow-hidden">
                     <button
-                      onClick={() => updateQuantity(item._id, item.quantity - 1)}
+                      onClick={() => updateQuantity(item.cartItemId, item.quantity - 1)}
                       className="w-9 h-9 flex items-center justify-center hover:bg-muted transition-colors"
                       aria-label="Kurangi"
                     >
@@ -89,7 +92,7 @@ export default function Cart() {
                     </button>
                     <span className="w-10 text-center text-sm font-bold">{item.quantity}</span>
                     <button
-                      onClick={() => updateQuantity(item._id, item.quantity + 1)}
+                      onClick={() => updateQuantity(item.cartItemId, item.quantity + 1)}
                       className="w-9 h-9 flex items-center justify-center hover:bg-muted transition-colors"
                       aria-label="Tambah"
                     >

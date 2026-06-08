@@ -1,6 +1,7 @@
 import { ArrowRight, Puzzle, PenTool, Globe, Heart, Landmark, HeartHandshake, BookOpen } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
+import { useAuthStore } from '@/store/useAuthStore'
 
 const values = [
   {
@@ -33,6 +34,8 @@ const team = [
 ]
 
 export default function About() {
+  const { isAuthenticated } = useAuthStore()
+
   return (
     <div className="overflow-x-hidden">
 
@@ -176,12 +179,25 @@ export default function About() {
               Jadilah bagian dari komunitas yang melestarikan budaya batik Indonesia untuk generasi mendatang.
             </p>
             <div className="flex flex-wrap gap-4 justify-center">
-              <Button size="lg" className="bg-white text-primary hover:bg-white/90 rounded-2xl px-8" asChild>
-                <Link to="/shop">Mulai Berbelanja</Link>
-              </Button>
-              <Button size="lg" variant="outline" className="border-white/40 text-white hover:bg-white/10 rounded-2xl px-8" asChild>
-                <Link to="/contact">Hubungi Kami</Link>
-              </Button>
+              {!isAuthenticated ? (
+                <>
+                  <Button size="lg" className="bg-white text-primary hover:bg-white/90 rounded-2xl px-8" asChild>
+                    <Link to="/login">Masuk Sekarang</Link>
+                  </Button>
+                  <Button size="lg" variant="outline" className="border-white/40 text-white hover:bg-white/10 rounded-2xl px-8" asChild>
+                    <Link to="/register">Daftar Sekarang</Link>
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button size="lg" className="bg-white text-primary hover:bg-white/90 rounded-2xl px-8" asChild>
+                    <Link to="/shop">Mulai Berbelanja</Link>
+                  </Button>
+                  <Button size="lg" variant="outline" className="border-white/40 text-white hover:bg-white/10 rounded-2xl px-8" asChild>
+                    <Link to="/contact">Hubungi Kami</Link>
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         </div>

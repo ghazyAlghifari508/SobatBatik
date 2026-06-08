@@ -34,6 +34,12 @@ export default function StoreProducts() {
   const [storeProducts, setStoreProducts] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 12
+
+  const totalPages = Math.ceil(storeProducts.length / itemsPerPage)
+  const currentProducts = storeProducts.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+
   const fetchProducts = async () => {
     try {
       const res = await api.get('/products/store')
@@ -152,29 +158,39 @@ export default function StoreProducts() {
                   <Label>Nama Produk</Label>
                   <Input value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} required />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-4 items-start">
+                  {/* Kiri: Harga */}
                   <div className="space-y-2">
                     <Label>Harga (Rp)</Label>
-                    <Input type="text" placeholder="Contoh: Rp 50.000" value={formData.price} onChange={e => setFormData({...formData, price: e.target.value})} required />
+                    <Input
+                      type="text"
+                      placeholder="Contoh: 50000"
+                      value={formData.price}
+                      onChange={e => setFormData({...formData, price: e.target.value})}
+                      required
+                    />
                   </div>
+
+                  {/* Kanan: Stok per Ukuran — 2×2 grid */}
                   <div className="space-y-2">
                     <Label>Stok per Ukuran</Label>
-                    <div className="flex gap-2">
-                      {['S', 'M', 'L', 'XL'].map((size) => (
-                        <div key={size} className="flex flex-col gap-1 w-full">
-                          <Label className="text-[10px] text-muted-foreground text-center">{size}</Label>
-                          <Input 
-                            type="number" 
+                    <div className="grid grid-cols-2 gap-2">
+                      {(['S', 'M', 'L', 'XL'] as const).map((size) => (
+                        <div key={size} className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border bg-muted/30">
+                          <span className="text-xs font-bold text-muted-foreground w-5 shrink-0">{size}</span>
+                          <Input
+                            type="number"
                             min="0"
-                            className="px-1 text-center"
-                            value={sizes[size as keyof typeof sizes]} 
-                            onChange={e => setSizes({...sizes, [size]: parseInt(e.target.value) || 0})} 
+                            className="h-7 text-sm text-center border-0 bg-transparent p-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+                            value={sizes[size]}
+                            onChange={e => setSizes({...sizes, [size]: parseInt(e.target.value) || 0})}
                           />
                         </div>
                       ))}
                     </div>
                   </div>
                 </div>
+
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Kategori</Label>
@@ -294,7 +310,7 @@ export default function StoreProducts() {
                 <TableCell colSpan={6} className="text-center h-24 text-muted-foreground">Belum ada produk.</TableCell>
               </TableRow>
             ) : (
-              storeProducts.map(product => (
+              currentProducts.map(product => (
                 <TableRow key={product._id}>
                   <TableCell className="font-medium">
                     <div className="flex items-center gap-3">
@@ -336,6 +352,30 @@ export default function StoreProducts() {
           </TableBody>
         </Table>
       </Card>
+
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2 mt-4">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+            disabled={currentPage === 1}
+          >
+            Sebelumnya
+          </Button>
+          <span className="text-sm font-medium mx-2">
+            Halaman {currentPage} dari {totalPages}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+            disabled={currentPage === totalPages}
+          >
+            Berikutnya
+          </Button>
+        </div>
+      )}
 
       <Dialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
         <DialogContent className="sm:max-w-[400px]">

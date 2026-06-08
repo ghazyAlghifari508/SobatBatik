@@ -1,33 +1,39 @@
-import { useOrderStore } from '../../store/useOrderStore'
-import { useProductStore } from '../../store/useProductStore'
-import { useStoreAppStore } from '../../store/useStoreAppStore'
+import { useState, useEffect } from 'react'
+import { api } from '@/lib/axios'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/card'
-import { Users, Store, ShoppingCart, Activity } from 'lucide-react'
+import { Users, Store, ShoppingCart, Activity, Loader2 } from 'lucide-react'
 import { XAxis, YAxis, CartesianGrid, Tooltip, LineChart, Line } from 'recharts'
 import { ChartContainer, ChartTooltipContent } from '../../components/ui/chart'
 
 export default function AdminDashboard() {
-  const { orders } = useOrderStore()
-  const { products } = useProductStore()
-  const { applications } = useStoreAppStore()
 
-  // In a real app we'd fetch users, here we just mock
-  const totalUsers = 150
-  
-  const activeStores = new Set(products.map(p => p.store_id)).size + applications.filter(a => a.status === 'Disetujui').length
-  const totalTransactions = orders.length
-  
-  const totalGMV = orders.reduce((sum, order) => sum + order.total_price, 0)
 
-  // Mock platform growth data
-  const growthData = [
-    { month: 'Jan', users: 100, transactions: 150 },
-    { month: 'Feb', users: 120, transactions: 200 },
-    { month: 'Mar', users: 150, transactions: 250 },
-    { month: 'Apr', users: 180, transactions: 300 },
-    { month: 'Mei', users: 220, transactions: 400 },
-    { month: 'Jun', users: totalUsers, transactions: totalTransactions * 10 },
-  ]
+  const [stats, setStats] = useState({
+    totalUsers: 0,
+    activeStores: 0,
+    totalTransactions: 0,
+    totalGMV: 0,
+    growthData: [] as any[]
+  })
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const res = await api.get('/admin/dashboard')
+        if (res.data.success) {
+          setStats(res.data.data)
+        }
+      } catch (error) {
+        console.error('Failed to fetch admin stats:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchStats()
+  }, [])
+
+  const { totalUsers, activeStores, totalTransactions, totalGMV, growthData } = stats
 
   const chartConfig = {
     users: {
@@ -38,6 +44,14 @@ export default function AdminDashboard() {
       label: "Transaksi",
       color: "hsl(var(--secondary))",
     }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    )
   }
 
   return (

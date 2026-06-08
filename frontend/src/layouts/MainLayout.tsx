@@ -21,6 +21,10 @@ export default function MainLayout() {
 
   // Cegah user biasa yang sudah login masuk kembali ke halaman auth
   if (isAuthenticated && user?.role === 'user' && isAuthPage) {
+    const { hasPendingStoreApp } = useAuthStore.getState()
+    if (hasPendingStoreApp) {
+      return <Navigate to="/store/pending" replace />
+    }
     return <Navigate to="/" replace />
   }
 

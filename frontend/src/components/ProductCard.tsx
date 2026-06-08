@@ -15,30 +15,22 @@ interface ProductCardProps {
 
 export default function ProductCard({ product, className }: ProductCardProps) {
   const { addItem } = useCartStore()
-  const [wishlisted, setWishlisted] = useState(false)
   const [imageLoaded, setImageLoaded] = useState(false)
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    addItem(product)
-    toast.success(`${product.name} ditambahkan ke keranjang!`, {
-      description: `Rp ${product.price.toLocaleString('id-ID')}`,
-    })
+    const success = addItem(product)
+    if (success) {
+      toast.success(`${product.name} ditambahkan ke keranjang!`, {
+        description: `Rp ${product.price.toLocaleString('id-ID')}`,
+      })
+    } else {
+      toast.error('Stok tidak mencukupi!', {
+        description: 'Anda telah mencapai batas maksimal stok produk ini di keranjang.'
+      })
+    }
   }
-
-  const handleWishlist = (e: React.MouseEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    setWishlisted(!wishlisted)
-    toast[wishlisted ? 'info' : 'success'](
-      wishlisted ? 'Dihapus dari wishlist' : 'Ditambahkan ke wishlist!'
-    )
-  }
-
-  const discountedPrice = product.discount_percent
-    ? product.price * (1 - product.discount_percent / 100)
-    : null
 
   return (
     <Link
@@ -70,14 +62,14 @@ export default function ProductCard({ product, className }: ProductCardProps) {
 
         {/* Badges */}
         <div className="absolute top-3 left-3 flex flex-col gap-1.5">
+          {product.stock === 0 && (
+            <span className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-black text-white shadow-sm border border-white/20">
+              HABIS
+            </span>
+          )}
           {product.is_new && (
             <span className="px-2 py-0.5 rounded-md text-[11px] font-semibold bg-primary text-primary-foreground shadow-sm">
               Baru
-            </span>
-          )}
-          {product.discount_percent && (
-            <span className="px-2 py-0.5 rounded-md text-[11px] font-semibold bg-[hsl(0_65%_30%)] text-white shadow-sm">
-              -{product.discount_percent}%
             </span>
           )}
         </div>
@@ -89,21 +81,7 @@ export default function ProductCard({ product, className }: ProductCardProps) {
           </span>
         </div>
 
-        {/* Wishlist Button */}
-        <button
-          onClick={handleWishlist}
-          aria-label={wishlisted ? 'Hapus dari wishlist' : 'Tambah ke wishlist'}
-          className={cn(
-            'absolute bottom-3 right-3 w-8 h-8 rounded-xl flex items-center justify-center',
-            'glass backdrop-blur-md transition-all duration-200',
-            'opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0',
-            wishlisted
-              ? 'text-red-500 bg-red-50/80'
-              : 'text-white hover:text-red-400'
-          )}
-        >
-          <Heart className={cn('h-4 w-4', wishlisted && 'fill-current')} />
-        </button>
+
 
         {/* Quick View */}
         <div className="absolute bottom-3 left-3 opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 transition-all duration-200">
@@ -152,13 +130,8 @@ export default function ProductCard({ product, className }: ProductCardProps) {
         <div className="flex items-center justify-between mt-auto pt-2">
           <div className="space-y-0.5">
             <div className="text-base font-bold text-primary">
-              Rp {(discountedPrice ?? product.price).toLocaleString('id-ID')}
+              Rp {product.price.toLocaleString('id-ID')}
             </div>
-            {discountedPrice && (
-              <div className="text-xs text-muted-foreground line-through">
-                Rp {product.price.toLocaleString('id-ID')}
-              </div>
-            )}
           </div>
 
           <Button

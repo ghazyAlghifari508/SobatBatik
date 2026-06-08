@@ -20,18 +20,18 @@ import Checkout from './pages/user/Checkout'
 import OrderHistory from './pages/user/OrderHistory'
 import OrderDetail from './pages/user/OrderDetail'
 import Profile from './pages/user/Profile'
-import Wishlist from './pages/user/Wishlist'
-import StoreApplication from './pages/user/StoreApplication'
 
 // Store Pages
 import StoreDashboard from './pages/store/StoreDashboard'
 import StoreProducts from './pages/store/StoreProducts'
 import StoreOrders from './pages/store/StoreOrders'
+import StorePending from './pages/store/StorePending'
 
 // Admin Pages
 import AdminDashboard from './pages/admin/AdminDashboard'
 import AdminApprovals from './pages/admin/AdminApprovals'
 import AdminMonitoring from './pages/admin/AdminMonitoring'
+import AdminFeedback from './pages/admin/AdminFeedback'
 
 // Protected Route Component
 const ProtectedRoute = ({ children, allowedRoles }: { children: React.ReactNode, allowedRoles?: string[] }) => {
@@ -53,18 +53,17 @@ export default function App() {
         <Route element={<MainLayout />}>
           {/* Public */}
           <Route path="/" element={<Home />} />
-          <Route path="/shop" element={<Shop />} />
-          <Route path="/product/:id" element={<ProductDetail />} />
           <Route path="/about" element={<About />} />
-          <Route path="/contact" element={<Contact />} />
 
           {/* Auth */}
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
 
-          {/* Always Accessible (UI Demo) */}
-          <Route path="/cart" element={<Cart />} />
-          <Route path="/wishlist" element={<Wishlist />} />
+          {/* Protected (Any Logged-in User) */}
+          <Route path="/shop" element={<ProtectedRoute><Shop /></ProtectedRoute>} />
+          <Route path="/product/:id" element={<ProtectedRoute><ProductDetail /></ProtectedRoute>} />
+          <Route path="/contact" element={<ProtectedRoute><Contact /></ProtectedRoute>} />
+          <Route path="/cart" element={<ProtectedRoute><Cart /></ProtectedRoute>} />
 
           {/* Protected User Routes */}
           <Route path="/checkout" element={
@@ -79,10 +78,10 @@ export default function App() {
           <Route path="/user/profile" element={
             <ProtectedRoute allowedRoles={['user']}><Profile /></ProtectedRoute>
           } />
-          <Route path="/user/apply-store" element={
-            <ProtectedRoute allowedRoles={['user']}><StoreApplication /></ProtectedRoute>
-          } />
         </Route>
+
+        {/* Store Pending — standalone page, no ProtectedRoute to avoid race condition */}
+        <Route path="/store/pending" element={<StorePending />} />
 
         {/* Store Dashboard Routes */}
         <Route path="/store" element={
@@ -100,6 +99,7 @@ export default function App() {
           <Route index element={<AdminDashboard />} />
           <Route path="approvals" element={<AdminApprovals />} />
           <Route path="monitoring" element={<AdminMonitoring />} />
+          <Route path="feedback" element={<AdminFeedback />} />
         </Route>
 
         {/* Catch all */}

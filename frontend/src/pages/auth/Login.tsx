@@ -15,7 +15,7 @@ export default function Login() {
   const [role, setRole] = useState<Role>('user')
   const [showPass, setShowPass] = useState(false)
   const [loading, setLoading] = useState(false)
-  const { loginWithData } = useAuthStore()
+  const { loginWithData, setPendingStoreApp } = useAuthStore()
   const navigate = useNavigate()
 
   const handleRoleSelect = (selectedRole: Role) => {
@@ -34,15 +34,27 @@ export default function Login() {
     try {
       const res = await api.post('/auth/login', { email, password })
       if (res.data.success) {
-        loginWithData(res.data.data.user, res.data.data.token)
         const userRole = res.data.data.user.role
-        if (userRole === 'admin') navigate('/admin')
-        else if (userRole === 'store') navigate('/store')
-        else navigate('/')
+        
+        // Check if user has a pending or rejected store application
+        if (res.data.data.pending_store_application) {
+          setPendingStoreApp(true)
+          loginWithData(res.data.data.user, res.data.data.token)
+          navigate('/store/pending')
+        } else {
+          loginWithData(res.data.data.user, res.data.data.token)
+          if (userRole === 'admin') {
+            navigate('/admin')
+          } else if (userRole === 'store') {
+            navigate('/store')
+          } else {
+            navigate('/')
+          }
+        }
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Login failed:', error)
-      alert('Login gagal. Pastikan API backend berjalan.')
+      alert(error.response?.data?.message || 'Login gagal. Pastikan API backend berjalan.')
     } finally {
       setLoading(false)
     }
