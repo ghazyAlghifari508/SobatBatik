@@ -1,22 +1,98 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useOrderStore } from '@/store/useOrderStore'
+import { useAuthStore } from '@/store/useAuthStore'
 import type { OrderStatus } from '@/store/useOrderStore'
 import { Button } from '@/components/ui/button'
-import { Package, ChevronDown, ChevronUp, Eye } from 'lucide-react'
+import { Package, ChevronDown, ChevronUp, Eye, Loader2, Star, MessageSquare, CheckCircle2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { api } from '@/lib/axios'
+import { toast } from 'sonner'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
+import { Textarea } from '@/components/ui/textarea'
 
 const statusConfig: Record<OrderStatus, { label: string; color: string; dot: string }> = {
-  Menunggu: { label: 'Menunggu Pembayaran', color: 'bg-yellow-100 text-yellow-800 border-yellow-200', dot: 'bg-yellow-500' },
+  Menunggu: { label: 'Menunggu Konfirmasi', color: 'bg-yellow-100 text-yellow-800 border-yellow-200', dot: 'bg-yellow-500' },
   Dikemas: { label: 'Sedang Dikemas', color: 'bg-blue-100 text-blue-800 border-blue-200', dot: 'bg-blue-500' },
   Dikirim: { label: 'Dalam Pengiriman', color: 'bg-purple-100 text-purple-800 border-purple-200', dot: 'bg-purple-500' },
   Selesai: { label: 'Selesai', color: 'bg-green-100 text-green-800 border-green-200', dot: 'bg-green-500' },
 }
 
 export default function OrderHistory() {
-  const { orders } = useOrderStore()
+  const { orders, loading, fetchOrders } = useOrderStore()
+  const { user } = useAuthStore()
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [filterStatus, setFilterStatus] = useState<string>('Semua')
+
+  const [reviewedProductIds, setReviewedProductIds] = useState<Set<string>>(new Set())
+
+  const [reviewModalOpen, setReviewModalOpen] = useState(false)
+  const [reviewProduct, setReviewProduct] = useState<{ id: string, name: string, orderId: string } | null>(null)
+  const [rating, setRating] = useState(5)
+  const [comment, setComment] = useState('')
+  const [submittingReview, setSubmittingReview] = useState(false)
+
+  const openReviewModal = (productId: string, productName: string, orderId: string) => {
+    setReviewProduct({ id: productId, name: productName, orderId })
+    setRating(5)
+    setComment('')
+    setReviewModalOpen(true)
+  }
+
+  const submitReview = async () => {
+    if (!reviewProduct) return
+    if (rating < 1 || rating > 5) return toast.error('Rating tidak valid')
+    
+    setSubmittingReview(true)
+    try {
+      const res = await api.post(`/products/${reviewProduct.id}/reviews`, {
+        order_id: reviewProduct.orderId,
+        rating,
+        comment
+      })
+      if (res.data.success) {
+        toast.success('Ulasan berhasil dikirim!')
+        setReviewedProductIds(prev => new Set([...prev, reviewProduct.id]))
+        setReviewModalOpen(false)
+      }
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Gagal mengirim ulasan')
+    } finally {
+      setSubmittingReview(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchOrders()
+  }, [])
+
+  useEffect(() => {
+    if (!orders.length || !user) return
+    const checkReviewed = async () => {
+      const reviewed = new Set<string>()
+      const productIds = new Set<string>()
+      
+      orders.forEach(o => {
+        if (o.status === 'Selesai') {
+          o.items.forEach(i => productIds.add(i.product_id))
+        }
+      })
+      
+      for (const pId of Array.from(productIds)) {
+        try {
+          const res = await api.get(`/products/${pId}/reviews`)
+          if (res.data.success) {
+            const alreadyReviewed = res.data.data.some(
+              (r: { user_id: string }) => r.user_id === user.id
+            )
+            if (alreadyReviewed) reviewed.add(pId)
+          }
+        } catch { /* skip */ }
+      }
+      setReviewedProductIds(reviewed)
+    }
+    checkReviewed()
+  }, [orders, user?.id])
 
   const statuses = ['Semua', 'Menunggu', 'Dikemas', 'Dikirim', 'Selesai']
 
@@ -26,6 +102,14 @@ export default function OrderHistory() {
 
   const formatDate = (iso: string) =>
     new Date(iso).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center py-40">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    )
+  }
 
   if (orders.length === 0) {
     return (
@@ -112,7 +196,7 @@ export default function OrderHistory() {
                       {order.items.slice(0, 3).map(item => (
                         <div key={item._id} className="w-10 h-10 rounded-lg border-2 border-white overflow-hidden bg-muted">
                           {item.image_url ? (
-                            <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" />
+                            <img src={item.image_url} alt={item.product_name} className="w-full h-full object-cover" />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center">
                               <Package className="h-4 w-4 text-muted-foreground" />
@@ -127,7 +211,7 @@ export default function OrderHistory() {
                       )}
                     </div>
                     <span className="text-sm text-muted-foreground ml-1 truncate">
-                      {order.items[0].name}
+                      {order.items[0].product_name}
                       {order.items.length > 1 && ` +${order.items.length - 1} lainnya`}
                     </span>
                   </div>
@@ -151,9 +235,6 @@ export default function OrderHistory() {
                     >
                       {isExpanded ? <><ChevronUp className="h-3.5 w-3.5" />Sembunyikan</> : <><ChevronDown className="h-3.5 w-3.5" />Lihat Item</>}
                     </button>
-                    {order.status === 'Dikirim' && (
-                      <Button size="sm" className="rounded-xl ml-auto">Konfirmasi Terima</Button>
-                    )}
                   </div>
                 </div>
 
@@ -164,17 +245,45 @@ export default function OrderHistory() {
                       <div key={item._id} className="flex items-center gap-3">
                         <div className="w-12 h-12 rounded-lg overflow-hidden bg-muted shrink-0">
                           {item.image_url
-                            ? <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" />
+                            ? <img src={item.image_url} alt={item.product_name} className="w-full h-full object-cover" />
                             : <Package className="h-5 w-5 m-auto mt-3.5 text-muted-foreground" />
                           }
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate">{item.name}</p>
-                          <p className="text-xs text-muted-foreground">{item.store_name} · × {item.quantity}</p>
+                          <p className="text-sm font-medium truncate">{item.product_name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {item.store_name} · × {item.quantity}
+                            {item.size ? ` · Ukuran: ${item.size}` : ''}
+                          </p>
                         </div>
-                        <p className="text-sm font-semibold shrink-0">
-                          Rp {(item.price_at_purchase * item.quantity).toLocaleString('id-ID')}
-                        </p>
+                        <div className="text-right">
+                          <p className="text-sm font-semibold shrink-0 mb-2">
+                            Rp {(item.price_at_purchase * item.quantity).toLocaleString('id-ID')}
+                          </p>
+                          {order.status === 'Selesai' && (
+                            reviewedProductIds.has(item.product_id) ? (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="text-xs h-7 px-2 border-destructive/30 text-destructive bg-destructive/5 hover:bg-destructive/5 opacity-80 cursor-not-allowed"
+                                disabled
+                              >
+                                <CheckCircle2 className="h-3 w-3 mr-1" />
+                                Diulas
+                              </Button>
+                            ) : (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="text-xs h-7 px-2"
+                                onClick={() => openReviewModal(item.product_id, item.product_name, order._id)}
+                              >
+                                <MessageSquare className="h-3 w-3 mr-1" />
+                                Ulas
+                              </Button>
+                            )
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -184,6 +293,50 @@ export default function OrderHistory() {
           })}
         </div>
       )}
+
+      {/* Review Modal */}
+      <Dialog open={reviewModalOpen} onOpenChange={setReviewModalOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Beri Ulasan Produk</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div>
+              <p className="text-sm font-medium mb-3">{reviewProduct?.name}</p>
+              <div className="flex gap-2 mb-4">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    type="button"
+                    onClick={() => setRating(star)}
+                    className="focus:outline-none hover:scale-110 transition-transform"
+                  >
+                    <Star className={cn('h-8 w-8', rating >= star ? 'fill-[hsl(43_85%_48%)] text-[hsl(43_85%_48%)]' : 'text-muted-foreground/30')} />
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="grid gap-2">
+              <label htmlFor="comment" className="text-sm font-medium">Komentar (Opsional)</label>
+              <Textarea
+                id="comment"
+                placeholder="Ceritakan pengalaman Anda dengan produk ini..."
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                className="resize-none"
+                rows={4}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setReviewModalOpen(false)} disabled={submittingReview}>Batal</Button>
+            <Button onClick={submitReview} disabled={submittingReview}>
+              {submittingReview && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Kirim Ulasan
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

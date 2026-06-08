@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn, getImageUrl } from '@/lib/utils'
+import { api } from '@/lib/axios'
 
 export default function ProductDetail() {
   const { id } = useParams()
@@ -28,8 +29,22 @@ export default function ProductDetail() {
 
   const [activeImage, setActiveImage] = useState(0)
   const [quantity, setQuantity] = useState(1)
-  const [wishlisted, setWishlisted] = useState(false)
   const [selectedSize, setSelectedSize] = useState('M')
+
+  const sizes = ['S', 'M', 'L', 'XL'] as const
+
+  useEffect(() => {
+    if (product && product.sizes) {
+      if (!product.sizes[selectedSize as keyof typeof product.sizes]) {
+        const available = sizes.find(s => (product.sizes?.[s] || 0) > 0)
+        if (available) setSelectedSize(available)
+      }
+    }
+  }, [product, selectedSize])
+
+  const maxStock = product?.sizes && product.category !== 'Kain' && product.category !== 'Aksesori'
+    ? (product.sizes[selectedSize as keyof typeof product.sizes] || 0)
+    : (product?.stock || 0);
 
   if (loading && !product) {
     return (
@@ -55,22 +70,38 @@ export default function ProductDetail() {
     .slice(0, 4)
 
   const handleAddToCart = () => {
-    for (let i = 0; i < quantity; i++) addItem(product)
-    toast.success(`${product.name} × ${quantity} ditambahkan ke keranjang!`)
+    let added = 0
+    for (let i = 0; i < quantity; i++) {
+      if (addItem(product, selectedSize)) added++
+    }
+    
+    if (added === quantity) {
+      toast.success(`${product.name} × ${quantity} ditambahkan ke keranjang!`)
+    } else if (added > 0) {
+      toast.success(`${product.name} × ${added} ditambahkan ke keranjang! (Sisa stok tidak mencukupi)`)
+    } else {
+      toast.error('Stok tidak mencukupi!', {
+        description: 'Anda telah mencapai batas maksimal stok produk ini di keranjang.'
+      })
+    }
   }
 
   const handleBuyNow = () => {
-    for (let i = 0; i < quantity; i++) addItem(product)
+    for (let i = 0; i < quantity; i++) addItem(product, selectedSize)
     navigate('/cart')
   }
 
-  const sizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL']
+  const [reviews, setReviews] = useState<any[]>([])
 
-  const dummyReviews = [
-    { id: 1, name: 'Anisa R.', rating: 5, date: '10 Nov 2024', comment: 'Kualitas luar biasa! Warna sangat cerah dan bahan nyaman dipakai.', avatar: 'AR' },
-    { id: 2, name: 'Budi S.', rating: 4, date: '5 Nov 2024', comment: 'Motifnya indah dan sesuai foto. Pengiriman cepat. Sangat puas!', avatar: 'BS' },
-    { id: 3, name: 'Citra M.', rating: 5, date: '1 Nov 2024', comment: 'Sudah beli beberapa kali di sini, selalu memuaskan. Recommended!', avatar: 'CM' },
-  ]
+  useEffect(() => {
+    if (product) {
+      api.get(`/products/${product._id}/reviews`).then(res => {
+        if (res.data.success) {
+          setReviews(res.data.data)
+        }
+      }).catch(console.error)
+    }
+  }, [product])
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -98,13 +129,6 @@ export default function ProductDetail() {
             {product.is_new && (
               <div className="absolute top-4 left-4">
                 <Badge className="rounded-xl text-sm px-3 py-1">Baru</Badge>
-              </div>
-            )}
-            {product.discount_percent && (
-              <div className="absolute top-4 right-4">
-                <span className="px-3 py-1 rounded-xl text-sm font-bold bg-[hsl(0_65%_30%)] text-white">
-                  -{product.discount_percent}%
-                </span>
               </div>
             )}
           </div>
@@ -167,15 +191,12 @@ export default function ProductDetail() {
           {/* Price */}
           <div className="flex items-end gap-3">
             <div className="text-4xl font-bold text-primary">
-              Rp {(product.discount_percent
-                ? product.price * (1 - product.discount_percent / 100)
-                : product.price
-              ).toLocaleString('id-ID')}
+              Rp {(product.price * quantity).toLocaleString('id-ID')}
             </div>
-            {product.discount_percent && (
-              <div className="text-xl text-muted-foreground line-through mb-1">
-                Rp {product.price.toLocaleString('id-ID')}
-              </div>
+            {quantity > 1 && (
+              <span className="text-sm text-muted-foreground mb-1.5">
+                (Rp {product.price.toLocaleString('id-ID')} / pcs)
+              </span>
             )}
           </div>
 
@@ -204,20 +225,27 @@ export default function ProductDetail() {
                 <button className="text-xs text-primary hover:underline">Panduan Ukuran</button>
               </div>
               <div className="flex gap-2 flex-wrap">
-                {sizes.map(size => (
-                  <button
-                    key={size}
-                    onClick={() => setSelectedSize(size)}
-                    className={cn(
-                      'w-11 h-11 rounded-xl text-sm font-medium border-2 transition-all',
-                      selectedSize === size
-                        ? 'border-primary bg-primary text-primary-foreground shadow-md'
-                        : 'border-border hover:border-primary text-foreground'
-                    )}
-                  >
-                    {size}
-                  </button>
-                ))}
+                {sizes.map(size => {
+                  const sizeStock = product.sizes ? (product.sizes[size] || 0) : 0;
+                  const isOutOfStock = sizeStock === 0;
+                  return (
+                    <button
+                      key={size}
+                      onClick={() => setSelectedSize(size)}
+                      disabled={isOutOfStock}
+                      className={cn(
+                        'w-11 h-11 rounded-xl text-sm font-medium border-2 transition-all',
+                        selectedSize === size
+                          ? 'border-primary bg-primary text-primary-foreground shadow-md'
+                          : isOutOfStock
+                            ? 'border-border bg-muted text-muted-foreground opacity-50 cursor-not-allowed'
+                            : 'border-border hover:border-primary text-foreground'
+                      )}
+                    >
+                      {size}
+                    </button>
+                  )
+                })}
               </div>
             </div>
           )}
@@ -237,15 +265,15 @@ export default function ProductDetail() {
                 </button>
                 <span className="w-12 text-center text-sm font-bold">{quantity}</span>
                 <button
-                  onClick={() => setQuantity(q => Math.min(product.stock, q + 1))}
+                  onClick={() => setQuantity(q => Math.min(maxStock, q + 1))}
                   className="w-10 h-10 flex items-center justify-center hover:bg-muted transition-colors"
-                  disabled={quantity >= product.stock}
+                  disabled={quantity >= maxStock}
                   aria-label="Tambah jumlah"
                 >
                   <Plus className="h-4 w-4" />
                 </button>
               </div>
-              <span className="text-sm text-muted-foreground">Sisa {product.stock} produk</span>
+              <span className="text-sm text-muted-foreground">Sisa {maxStock} produk</span>
             </div>
           </div>
 
@@ -255,17 +283,17 @@ export default function ProductDetail() {
               size="lg"
               className="flex-1 h-13 rounded-2xl text-base font-semibold gap-2 shadow-lg"
               onClick={handleAddToCart}
-              disabled={product.stock === 0}
+              disabled={maxStock === 0}
             >
               <ShoppingCart className="h-5 w-5" />
-              {product.stock === 0 ? 'Stok Habis' : 'Tambah ke Keranjang'}
+              {maxStock === 0 ? 'Stok Habis' : 'Tambah ke Keranjang'}
             </Button>
             <Button
               size="lg"
               variant="outline"
               className="flex-1 h-13 rounded-2xl text-base font-semibold border-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground"
               onClick={handleBuyNow}
-              disabled={product.stock === 0}
+              disabled={maxStock === 0}
             >
               Beli Sekarang
             </Button>
@@ -273,18 +301,6 @@ export default function ProductDetail() {
 
           {/* Secondary actions */}
           <div className="flex gap-3">
-            <button
-              onClick={() => setWishlisted(!wishlisted)}
-              className={cn(
-                'flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium border transition-all',
-                wishlisted
-                  ? 'border-red-400 text-red-500 bg-red-50'
-                  : 'border-border text-muted-foreground hover:border-primary hover:text-primary'
-              )}
-            >
-              <Heart className={cn('h-4 w-4', wishlisted && 'fill-current')} />
-              {wishlisted ? 'Tersimpan' : 'Simpan'}
-            </button>
             <button
               className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium border border-border text-muted-foreground hover:border-primary hover:text-primary transition-all"
               onClick={() => { navigator.clipboard.writeText(window.location.href); toast.info('Link disalin!') }}
@@ -328,16 +344,19 @@ export default function ProductDetail() {
           </div>
         </div>
         <div className="space-y-4">
-          {dummyReviews.map(review => (
-            <div key={review.id} className="glass-card rounded-2xl p-5">
+          {reviews.length === 0 ? (
+            <div className="text-center text-muted-foreground py-8">Belum ada ulasan.</div>
+          ) : (
+            reviews.map(review => (
+            <div key={review._id} className="glass-card rounded-2xl p-5">
               <div className="flex items-start gap-3">
-                <div className="w-9 h-9 rounded-full gradient-hero flex items-center justify-center text-white text-sm font-bold shrink-0">
-                  {review.avatar}
+                <div className="w-9 h-9 rounded-full gradient-hero flex items-center justify-center text-white text-sm font-bold shrink-0 uppercase">
+                  {review.user_name.substring(0, 2)}
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center justify-between mb-1">
-                    <span className="font-semibold text-sm">{review.name}</span>
-                    <span className="text-xs text-muted-foreground">{review.date}</span>
+                    <span className="font-semibold text-sm">{review.user_name}</span>
+                    <span className="text-xs text-muted-foreground">{new Date(review.created_at).toLocaleDateString('id-ID')}</span>
                   </div>
                   <div className="flex mb-2">
                     {[...Array(5)].map((_, i) => (
@@ -348,7 +367,7 @@ export default function ProductDetail() {
                 </div>
               </div>
             </div>
-          ))}
+          )))}
         </div>
       </div>
 

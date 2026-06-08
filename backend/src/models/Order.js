@@ -6,7 +6,9 @@ const orderItemSchema = new mongoose.Schema({
   store_name: { type: String, required: true }, // Denormalized for easier rendering
   product_name: { type: String, required: true },
   quantity: { type: Number, required: true, min: 1 },
-  price_at_purchase: { type: Number, required: true, min: 0 }
+  price_at_purchase: { type: Number, required: true, min: 0 },
+  image_url: { type: String },
+  size: { type: String }
 });
 
 const orderSchema = new mongoose.Schema({

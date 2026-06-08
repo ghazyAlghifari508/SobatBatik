@@ -33,16 +33,20 @@ export default function Checkout() {
 
   const handlePlaceOrder = async () => {
     setLoading(true)
-    await new Promise(r => setTimeout(r, 1200))
-    placeOrder({
-      items,
-      shipping_address: `${form.address}, ${form.city}, ${form.province} ${form.zip}`,
-      total_price: total,
-    })
-    clearCart()
-    toast.success('Pesanan berhasil dibuat!')
-    navigate('/user/orders')
-    setLoading(false)
+    try {
+      await placeOrder({
+        items,
+        shipping_address: `${form.address}, ${form.city}, ${form.province} ${form.zip}`,
+        total_price: total,
+      })
+      clearCart()
+      toast.success('Pesanan berhasil dibuat!')
+      navigate('/user/orders')
+    } catch (error) {
+      toast.error('Gagal membuat pesanan')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const steps = [
@@ -304,13 +308,13 @@ export default function Checkout() {
             <h2 className="font-bold text-base mb-4">Ringkasan Pesanan</h2>
             <div className="space-y-3 max-h-64 overflow-y-auto pr-1">
               {items.map(item => (
-                <div key={item._id} className="flex gap-3">
+                <div key={item.cartItemId} className="flex gap-3">
                   <div className="w-12 h-12 rounded-lg overflow-hidden bg-muted shrink-0 border border-border">
                     <img src={getImageUrl(item.image_urls?.[0])} alt={item.name} className="w-full h-full object-cover" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">{item.name}</p>
-                    <p className="text-xs text-muted-foreground">× {item.quantity}</p>
+                    <p className="text-xs text-muted-foreground">× {item.quantity}{item.selectedSize ? ` · Ukuran: ${item.selectedSize}` : ''}</p>
                   </div>
                   <p className="text-sm font-semibold shrink-0">Rp {(item.price * item.quantity).toLocaleString('id-ID')}</p>
                 </div>

@@ -1,100 +1,150 @@
-import { useState, useMemo, useEffect } from 'react'
-import { useSearchParams } from 'react-router-dom'
-import { Search, SlidersHorizontal, ChevronDown, X, Star, SearchX, Loader2 } from 'lucide-react'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { useSearchParams, useNavigate } from 'react-router-dom'
+import { Search, SlidersHorizontal, X, Star, SearchX, Loader2, ChevronDown } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import ProductCard from '@/components/ProductCard'
 import { useProductStore } from '@/store/useProductStore'
-import { categoryOptions, regions, sortOptions } from '@/data/dummyData'
+import { sortOptions } from '@/data/dummyData'
 import { cn } from '@/lib/utils'
 
 const priceRanges = [
-  { label: 'Semua Harga', min: 0, max: Infinity },
+  { label: 'Semua Harga', min: undefined, max: undefined },
   { label: 'Di bawah Rp 200.000', min: 0, max: 200000 },
   { label: 'Rp 200.000 - 500.000', min: 200000, max: 500000 },
-  { label: 'Di atas Rp 500.000', min: 500000, max: Infinity },
+  { label: 'Di atas Rp 500.000', min: 500000, max: undefined },
 ]
 
-const ITEMS_PER_PAGE = 8
-
 export default function Shop() {
-  const { products, loading, fetchPublicProducts } = useProductStore()
-  const [searchParams] = useSearchParams()
+  const { products, loading, pagination, fetchPublicProducts } = useProductStore()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const navigate = useNavigate()
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  useEffect(() => {
-    fetchPublicProducts()
-  }, [fetchPublicProducts])
+  // Filter state dari URL (single source of truth untuk filter sidebar)
+  const urlCategory = searchParams.get('category') || 'Semua Kategori'
+  const urlRegion   = searchParams.get('region') || 'Semua Daerah'
+  const urlSort     = searchParams.get('sort') || 'newest'
+  const urlPage     = Number(searchParams.get('page')) || 1
+  const urlPriceIdx = Number(searchParams.get('price_range')) || 0
 
+  // Search query — LOCAL state, langsung fetch saat berubah (real-time)
   const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '')
-  const [selectedCategory, setSelectedCategory] = useState(searchParams.get('category') || 'Semua Kategori')
-  const [selectedRegion, setSelectedRegion] = useState('Semua Daerah')
-  const [selectedPriceRange, setSelectedPriceRange] = useState(0)
-  const [selectedSort, setSelectedSort] = useState(searchParams.get('sort') || 'newest')
-  const [minRating, setMinRating] = useState(0)
   const [showFilter, setShowFilter] = useState(false)
-  const [page, setPage] = useState(1)
 
-  const filtered = useMemo(() => {
-    let result = products.filter(p => p.is_active)
+  const [availableCategories, setAvailableCategories] = useState<string[]>(['Semua Kategori'])
+  const [availableRegions, setAvailableRegions] = useState<string[]>(['Semua Daerah'])
 
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase()
-      result = result.filter(p =>
-        p.name.toLowerCase().includes(q) ||
-        p.description.toLowerCase().includes(q) ||
-        p.origin_region.toLowerCase().includes(q) ||
-        p.store_name.toLowerCase().includes(q) ||
-        p.pattern.toLowerCase().includes(q)
-      )
+  // Fungsi fetch utama
+  const doFetch = useCallback((search: string) => {
+    const priceRange = priceRanges[urlPriceIdx]
+    fetchPublicProducts({
+      search: search.trim() || undefined,
+      category: urlCategory !== 'Semua Kategori' ? urlCategory : undefined,
+      region: urlRegion !== 'Semua Daerah' ? urlRegion : undefined,
+      min_price: priceRange.min,
+      max_price: priceRange.max,
+      sort: urlSort,
+      page: urlPage,
+      limit: 16,
+    })
+  }, [urlCategory, urlRegion, urlPriceIdx, urlSort, urlPage, fetchPublicProducts])
+
+  // Ketika filter sidebar (kategori/region/harga/sort/page) berubah → fetch ulang
+  useEffect(() => {
+    doFetch(searchQuery)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [urlCategory, urlRegion, urlPriceIdx, urlSort, urlPage])
+
+  // Real-time search dengan debounce 300ms — fetch saat user mengetik
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value)
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => {
+      doFetch(value)
+    }, 300)
+  }
+
+  // Sinkronisasi dari navigasi Navbar (?search=...)
+  useEffect(() => {
+    const navSearch = searchParams.get('search') || ''
+    if (navSearch !== searchQuery) {
+      setSearchQuery(navSearch)
+      doFetch(navSearch)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams.get('search')])
 
-    if (selectedCategory !== 'Semua Kategori') {
-      result = result.filter(p => p.category === selectedCategory)
+  // Fetch sidebar options sekali saat mount
+  useEffect(() => {
+    import('@/lib/axios').then(({ api }) => {
+      api.get('/products?limit=200').then(res => {
+        if (res.data.success && Array.isArray(res.data.data)) {
+          const data = res.data.data
+          const cats = new Set<string>(data.map((p: { category: string }) => p.category).filter(Boolean))
+          const regs = new Set<string>(data.map((p: { origin_region: string }) => p.origin_region).filter(Boolean))
+          setAvailableCategories(['Semua Kategori', ...Array.from(cats).sort()])
+          setAvailableRegions(['Semua Daerah', ...Array.from(regs).sort()])
+        }
+      }).catch(() => {})
+    })
+    // Initial fetch
+    doFetch(searchParams.get('search') || '')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Helper: update URL param untuk filter sidebar
+  const updateParam = (key: string, value: string | null) => {
+    const next = new URLSearchParams(searchParams)
+    if (value === null || value === '') {
+      next.delete(key)
+    } else {
+      next.set(key, value)
     }
+    next.delete('page')
+    setSearchParams(next, { replace: true })
+  }
 
-    if (selectedRegion !== 'Semua Daerah') {
-      result = result.filter(p => p.origin_region === selectedRegion)
-    }
+  const handleCategoryChange = (cat: string) => {
+    updateParam('category', cat === 'Semua Kategori' ? null : cat)
+    setShowFilter(false)
+  }
 
-    const range = priceRanges[selectedPriceRange]
-    result = result.filter(p => p.price >= range.min && p.price <= range.max)
+  const handleRegionChange = (region: string) => {
+    updateParam('region', region === 'Semua Daerah' ? null : region)
+  }
 
-    if (minRating > 0) {
-      result = result.filter(p => p.rating >= minRating)
-    }
+  const handlePriceChange = (idx: number) => {
+    updateParam('price_range', idx === 0 ? null : String(idx))
+  }
 
-    switch (selectedSort) {
-      case 'price_asc': result.sort((a, b) => a.price - b.price); break
-      case 'price_desc': result.sort((a, b) => b.price - a.price); break
-      case 'rating': result.sort((a, b) => b.rating - a.rating); break
-      default: break
-    }
+  const handleSortChange = (sort: string) => {
+    updateParam('sort', sort)
+  }
 
-    return result
-  }, [products, searchQuery, selectedCategory, selectedRegion, selectedPriceRange, selectedSort, minRating])
-
-  const paginated = filtered.slice(0, page * ITEMS_PER_PAGE)
-  const hasMore = paginated.length < filtered.length
-
-  const activeFiltersCount = [
-    selectedCategory !== 'Semua Kategori',
-    selectedRegion !== 'Semua Daerah',
-    selectedPriceRange !== 0,
-    minRating > 0,
-  ].filter(Boolean).length
+  const handlePageChange = (newPage: number) => {
+    const next = new URLSearchParams(searchParams)
+    next.set('page', String(newPage))
+    setSearchParams(next, { replace: true })
+  }
 
   const clearFilters = () => {
-    setSelectedCategory('Semua Kategori')
-    setSelectedRegion('Semua Daerah')
-    setSelectedPriceRange(0)
-    setMinRating(0)
-    setPage(1)
+    navigate('/shop', { replace: true })
+    setSearchQuery('')
+    doFetch('')
   }
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault()
-    setPage(1)
-  }
+  // activeFiltersCount hanya untuk filter sidebar (bukan search query)
+  const activeFiltersCount = [
+    urlCategory !== 'Semua Kategori',
+    urlRegion !== 'Semua Daerah',
+    urlPriceIdx !== 0,
+  ].filter(Boolean).length
+
+  const displayedProducts = products
+
+  const total = pagination?.totalProducts ?? displayedProducts.length
+  const totalPages = pagination?.totalPages ?? 1
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
@@ -103,29 +153,45 @@ export default function Shop() {
       <div className="mb-8">
         <h1 className="text-3xl sm:text-4xl font-bold text-foreground mb-2">Toko Batik</h1>
         <p className="text-muted-foreground">
-          Menemukan {filtered.length} produk batik autentik untuk Anda
+          {loading
+            ? 'Memuat produk...'
+            : searchQuery.trim()
+              ? `Menampilkan ${total} hasil untuk "${searchQuery.trim()}"`
+              : `Menemukan ${total} produk batik autentik untuk Anda`
+          }
         </p>
       </div>
 
       {/* Search + Controls Bar */}
       <div className="flex flex-col sm:flex-row gap-3 mb-6">
-        <form onSubmit={handleSearch} className="relative flex-1">
+        {/* Search Input — real-time, tanpa tombol Cari */}
+        <div className="relative flex-1">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <input
             type="text"
-            placeholder="Cari nama produk, motif, daerah..."
+            placeholder="Cari nama produk, motif, daerah asal, atau nama toko..."
             value={searchQuery}
-            onChange={(e) => { setSearchQuery(e.target.value); setPage(1) }}
+            onChange={(e) => handleSearchChange(e.target.value)}
             id="shop-search-input"
-            className="w-full h-11 pl-10 pr-4 rounded-xl border border-border bg-card text-sm outline-none focus:ring-2 focus:ring-ring focus:border-primary transition-all"
+            className="w-full h-11 pl-10 pr-10 rounded-xl border border-border bg-card text-sm outline-none focus:ring-2 focus:ring-ring focus:border-primary transition-all"
           />
-        </form>
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => handleSearchChange('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              aria-label="Hapus pencarian"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
 
         {/* Sort Dropdown */}
         <div className="relative">
           <select
-            value={selectedSort}
-            onChange={(e) => { setSelectedSort(e.target.value); setPage(1) }}
+            value={urlSort}
+            onChange={(e) => handleSortChange(e.target.value)}
             id="shop-sort-select"
             className="h-11 pl-4 pr-8 rounded-xl border border-border bg-card text-sm outline-none focus:ring-2 focus:ring-ring appearance-none cursor-pointer min-w-[180px]"
           >
@@ -169,13 +235,13 @@ export default function Shop() {
             {/* Category */}
             <div className="space-y-2">
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Kategori</p>
-              {categoryOptions.map(cat => (
+              {availableCategories.map(cat => (
                 <button
                   key={cat}
-                  onClick={() => { setSelectedCategory(cat); setPage(1) }}
+                  onClick={() => handleCategoryChange(cat)}
                   className={cn(
                     'w-full text-left px-3 py-2 rounded-lg text-sm transition-colors',
-                    selectedCategory === cat
+                    urlCategory === cat
                       ? 'bg-primary text-primary-foreground font-medium'
                       : 'text-foreground/70 hover:bg-muted hover:text-foreground'
                   )}
@@ -189,12 +255,12 @@ export default function Shop() {
             <div className="space-y-2">
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Daerah Asal</p>
               <select
-                value={selectedRegion}
-                onChange={(e) => { setSelectedRegion(e.target.value); setPage(1) }}
+                value={urlRegion}
+                onChange={(e) => handleRegionChange(e.target.value)}
                 id="shop-region-select"
                 className="w-full h-9 px-3 rounded-lg border border-border bg-background text-sm outline-none focus:ring-2 focus:ring-ring"
               >
-                {regions.map(r => <option key={r}>{r}</option>)}
+                {availableRegions.map(r => <option key={r}>{r}</option>)}
               </select>
             </div>
 
@@ -204,10 +270,10 @@ export default function Shop() {
               {priceRanges.map((range, i) => (
                 <button
                   key={i}
-                  onClick={() => { setSelectedPriceRange(i); setPage(1) }}
+                  onClick={() => handlePriceChange(i)}
                   className={cn(
                     'w-full text-left px-3 py-2 rounded-lg text-xs transition-colors leading-snug',
-                    selectedPriceRange === i
+                    urlPriceIdx === i
                       ? 'bg-primary text-primary-foreground font-medium'
                       : 'text-foreground/70 hover:bg-muted'
                   )}
@@ -215,29 +281,6 @@ export default function Shop() {
                   {range.label}
                 </button>
               ))}
-            </div>
-
-            {/* Min Rating */}
-            <div className="space-y-2">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Rating Minimal</p>
-              <div className="flex flex-wrap gap-1.5">
-                {[0, 3, 4, 5].map(r => (
-                  <button
-                    key={r}
-                    onClick={() => { setMinRating(r); setPage(1) }}
-                    className={cn(
-                      'flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-colors border',
-                      minRating === r
-                        ? 'bg-primary text-primary-foreground border-primary'
-                        : 'border-border text-foreground/70 hover:border-primary hover:text-primary'
-                    )}
-                  >
-                    {r === 0 ? 'Semua' : (
-                      <><Star className="h-3 w-3 fill-current" />{r}+</>
-                    )}
-                  </button>
-                ))}
-              </div>
             </div>
           </div>
         </aside>
@@ -256,14 +299,31 @@ export default function Shop() {
                   <X className="h-5 w-5" />
                 </button>
               </div>
-              {/* Same filters as sidebar */}
               <div className="space-y-6">
                 <div className="space-y-2">
                   <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Kategori</p>
-                  {categoryOptions.map(cat => (
-                    <button key={cat} onClick={() => { setSelectedCategory(cat); setPage(1); setShowFilter(false) }}
-                      className={cn('w-full text-left px-3 py-2 rounded-lg text-sm transition-colors', selectedCategory === cat ? 'bg-primary text-primary-foreground' : 'hover:bg-muted')}>
+                  {availableCategories.map(cat => (
+                    <button key={cat} onClick={() => handleCategoryChange(cat)}
+                      className={cn('w-full text-left px-3 py-2 rounded-lg text-sm transition-colors', urlCategory === cat ? 'bg-primary text-primary-foreground' : 'hover:bg-muted')}>
                       {cat}
+                    </button>
+                  ))}
+                </div>
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Daerah Asal</p>
+                  {availableRegions.map(r => (
+                    <button key={r} onClick={() => { handleRegionChange(r); setShowFilter(false) }}
+                      className={cn('w-full text-left px-3 py-2 rounded-lg text-sm transition-colors', urlRegion === r ? 'bg-primary text-primary-foreground' : 'hover:bg-muted')}>
+                      {r}
+                    </button>
+                  ))}
+                </div>
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Harga</p>
+                  {priceRanges.map((range, i) => (
+                    <button key={i} onClick={() => { handlePriceChange(i); setShowFilter(false) }}
+                      className={cn('w-full text-left px-3 py-2 rounded-lg text-xs transition-colors', urlPriceIdx === i ? 'bg-primary text-primary-foreground' : 'hover:bg-muted')}>
+                      {range.label}
                     </button>
                   ))}
                 </div>
@@ -275,25 +335,25 @@ export default function Shop() {
 
         {/* Product Grid */}
         <div className="flex-1 min-w-0">
-          {/* Active Filter Tags */}
+          {/* Active Filter Tags — hanya untuk filter sidebar, BUKAN search */}
           {activeFiltersCount > 0 && (
             <div className="flex flex-wrap gap-2 mb-5">
-              {selectedCategory !== 'Semua Kategori' && (
+              {urlCategory !== 'Semua Kategori' && (
                 <Badge variant="secondary" className="gap-1.5 pr-1.5 rounded-full">
-                  {selectedCategory}
-                  <button onClick={() => { setSelectedCategory('Semua Kategori'); setPage(1) }} className="hover:text-destructive"><X className="h-3 w-3" /></button>
+                  {urlCategory}
+                  <button onClick={() => updateParam('category', null)} className="hover:text-destructive"><X className="h-3 w-3" /></button>
                 </Badge>
               )}
-              {selectedRegion !== 'Semua Daerah' && (
+              {urlRegion !== 'Semua Daerah' && (
                 <Badge variant="secondary" className="gap-1.5 pr-1.5 rounded-full">
-                  {selectedRegion}
-                  <button onClick={() => { setSelectedRegion('Semua Daerah'); setPage(1) }} className="hover:text-destructive"><X className="h-3 w-3" /></button>
+                  {urlRegion}
+                  <button onClick={() => updateParam('region', null)} className="hover:text-destructive"><X className="h-3 w-3" /></button>
                 </Badge>
               )}
-              {selectedPriceRange !== 0 && (
+              {urlPriceIdx !== 0 && (
                 <Badge variant="secondary" className="gap-1.5 pr-1.5 rounded-full">
-                  {priceRanges[selectedPriceRange].label}
-                  <button onClick={() => { setSelectedPriceRange(0); setPage(1) }} className="hover:text-destructive"><X className="h-3 w-3" /></button>
+                  {priceRanges[urlPriceIdx].label}
+                  <button onClick={() => updateParam('price_range', null)} className="hover:text-destructive"><X className="h-3 w-3" /></button>
                 </Badge>
               )}
             </div>
@@ -305,36 +365,74 @@ export default function Shop() {
               <Loader2 className="h-10 w-10 animate-spin mb-4" />
               <p>Memuat produk...</p>
             </div>
-          ) : filtered.length === 0 ? (
+          ) : displayedProducts.length === 0 ? (
             <div className="text-center py-20 glass-card rounded-2xl">
               <SearchX className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-xl font-bold mb-2">Produk tidak ditemukan</h3>
-              <p className="text-muted-foreground mb-4">Coba ubah filter atau kata kunci pencarian</p>
+              <p className="text-muted-foreground mb-4">
+                {searchQuery.trim()
+                  ? `Tidak ada produk yang cocok dengan "${searchQuery.trim()}"`
+                  : 'Coba ubah filter atau kata kunci pencarian'
+                }
+              </p>
               <Button variant="outline" onClick={clearFilters}>Reset Filter</Button>
             </div>
           ) : (
             <>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 stagger-children">
-                {paginated.map(product => (
+                {displayedProducts.map(product => (
                   <ProductCard key={product._id} product={product} />
                 ))}
               </div>
 
-              {hasMore && (
-                <div className="text-center mt-10">
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-center gap-2 mt-10">
                   <Button
                     variant="outline"
-                    size="lg"
-                    className="rounded-2xl px-10"
-                    onClick={() => setPage(p => p + 1)}
+                    size="sm"
+                    className="rounded-xl"
+                    disabled={urlPage <= 1}
+                    onClick={() => handlePageChange(urlPage - 1)}
                   >
-                    Muat Lebih Banyak ({filtered.length - paginated.length} lagi)
+                    ← Sebelumnya
+                  </Button>
+                  {Array.from({ length: totalPages }, (_, i) => i + 1)
+                    .filter(p => p === 1 || p === totalPages || Math.abs(p - urlPage) <= 1)
+                    .reduce<(number | 'ellipsis')[]>((acc, p, idx, arr) => {
+                      if (idx > 0 && p - (arr[idx - 1] as number) > 1) acc.push('ellipsis')
+                      acc.push(p)
+                      return acc
+                    }, [])
+                    .map((p, i) => p === 'ellipsis' ? (
+                      <span key={`e${i}`} className="text-muted-foreground px-1">…</span>
+                    ) : (
+                      <Button
+                        key={p}
+                        variant={urlPage === p ? 'default' : 'outline'}
+                        size="sm"
+                        className="rounded-xl w-9 h-9 p-0"
+                        onClick={() => handlePageChange(p as number)}
+                      >
+                        {p}
+                      </Button>
+                    ))
+                  }
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="rounded-xl"
+                    disabled={urlPage >= totalPages}
+                    onClick={() => handlePageChange(urlPage + 1)}
+                  >
+                    Berikutnya →
                   </Button>
                 </div>
               )}
 
               <p className="text-center text-sm text-muted-foreground mt-6">
-                Menampilkan {paginated.length} dari {filtered.length} produk
+                Menampilkan {displayedProducts.length} dari {total} produk
+                {searchQuery.trim() && ` untuk "${searchQuery.trim()}"`}
               </p>
             </>
           )}

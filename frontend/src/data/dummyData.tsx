@@ -3,36 +3,36 @@ import { Shirt, ShoppingBag, Scissors, Briefcase, ShieldCheck, Truck, RotateCcw,
 
 export const categories = [
   {
-    id: "pria",
-    label: "Pria",
-    icon: <Shirt className="w-8 h-8" />,
+    id: "batik-cap",
+    label: "Batik Cap",
+    icon: <Briefcase className="w-8 h-8" />,
     count: 48,
-    description: "Kemeja, batik formal & casual pria",
+    description: "Koleksi batik cap autentik",
     color: "from-amber-800 to-amber-600",
   },
   {
-    id: "wanita",
-    label: "Wanita",
-    icon: <ShoppingBag className="w-8 h-8" />,
+    id: "batik-tulis",
+    label: "Batik Tulis",
+    icon: <Shirt className="w-8 h-8" />,
     count: 65,
-    description: "Dress, blus & kebaya wanita",
+    description: "Koleksi batik tulis premium",
     color: "from-rose-800 to-rose-600",
   },
   {
-    id: "kain",
-    label: "Kain",
-    icon: <Scissors className="w-8 h-8" />,
+    id: "batik-kombinasi",
+    label: "Batik Kombinasi",
+    icon: <Layers className="w-8 h-8" />,
     count: 32,
-    description: "Kain batik tulis & cap pilihan",
+    description: "Perpaduan motif klasik dan modern",
     color: "from-yellow-800 to-yellow-600",
   },
   {
-    id: "aksesori",
-    label: "Aksesori",
-    icon: <Briefcase className="w-8 h-8" />,
+    id: "pakaian",
+    label: "Pakaian",
+    icon: <ShoppingBag className="w-8 h-8" />,
     count: 27,
-    description: "Tas, selendang & aksesori batik",
-    color: "from-stone-700 to-stone-500",
+    description: "Pakaian pria dan wanita bermotif batik",
+    color: "from-stone-800 to-stone-600",
   },
 ]
 
@@ -155,9 +155,7 @@ export const shippingMethods = [
 ]
 
 export const paymentMethods = [
-  { id: "transfer", name: "Transfer Bank", icon: <Landmark className="w-5 h-5" /> },
-  { id: "ewallet", name: "E-Wallet", icon: <Smartphone className="w-5 h-5" /> },
-  { id: "cod", name: "Bayar di Tempat", icon: <Banknote className="w-5 h-5" /> },
+  { id: "cod", name: "Bayar di Tempat (COD)", icon: <Banknote className="w-5 h-5" /> },
 ]
 
 export const dummyOrders = [

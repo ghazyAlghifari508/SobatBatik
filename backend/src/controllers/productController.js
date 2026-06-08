@@ -2,10 +2,74 @@ const Product = require('../models/Product');
 const Store = require('../models/Store');
 
 // GET /api/v1/products (Public)
+// Supports: ?search=, ?category=, ?region=, ?min_price=, ?max_price=, ?sort=newest|price_asc|price_desc|rating, ?page=, ?limit=
 exports.getAllProducts = async (req, res) => {
   try {
-    const products = await Product.find({ is_active: true }).sort({ created_at: -1 });
-    res.json({ success: true, message: 'Products fetched', data: products });
+    const {
+      search,
+      category,
+      region,
+      min_price,
+      max_price,
+      sort = 'newest',
+      page = 1,
+      limit = 20,
+    } = req.query;
+
+    // Build filter query
+    const filter = { is_active: true };
+
+    // Full-text search: name, description, origin_region, store_name
+    if (search && search.trim()) {
+      const regex = new RegExp(search.trim().split(/\s+/).join('|'), 'i');
+      filter.$or = [
+        { name: regex },
+        { description: regex },
+        { origin_region: regex },
+        { store_name: regex },
+      ];
+    }
+
+    if (category && category !== 'Semua Kategori') {
+      filter.category = category;
+    }
+
+    if (region && region !== 'Semua Daerah') {
+      filter.origin_region = region;
+    }
+
+    if (min_price || max_price) {
+      filter.price = {};
+      if (min_price) filter.price.$gte = Number(min_price);
+      if (max_price) filter.price.$lte = Number(max_price);
+    }
+
+    // Sort
+    let sortQuery = { created_at: -1 };
+    if (sort === 'price_asc') sortQuery = { price: 1 };
+    else if (sort === 'price_desc') sortQuery = { price: -1 };
+    else if (sort === 'rating') sortQuery = { rating: -1 };
+
+    const pageNum = Math.max(1, Number(page));
+    const limitNum = Math.min(100, Math.max(1, Number(limit)));
+    const skip = (pageNum - 1) * limitNum;
+
+    const [products, totalProducts] = await Promise.all([
+      Product.find(filter).sort(sortQuery).skip(skip).limit(limitNum),
+      Product.countDocuments(filter),
+    ]);
+
+    res.json({
+      success: true,
+      message: 'Products fetched',
+      data: products,
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
+        totalProducts,
+        totalPages: Math.ceil(totalProducts / limitNum),
+      },
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message, data: null });
   }
@@ -19,6 +83,17 @@ exports.getStoreProducts = async (req, res) => {
 
     const products = await Product.find({ store_id: store._id }).sort({ created_at: -1 });
     res.json({ success: true, message: 'Products fetched', data: products });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message, data: null });
+  }
+};
+
+// GET /api/v1/products/:id (Public)
+exports.getProductById = async (req, res) => {
+  try {
+    const product = await Product.findById(req.params.id);
+    if (!product) return res.status(404).json({ success: false, message: 'Produk tidak ditemukan', data: null });
+    res.json({ success: true, message: 'Product fetched', data: product });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message, data: null });
   }

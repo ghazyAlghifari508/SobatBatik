@@ -71,11 +71,11 @@ export default function StoreOrders() {
           <TableBody>
             {storeOrders.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center h-24 text-muted-foreground">Belum ada pesanan masuk.</TableCell>
+                <TableCell colSpan={6} className="text-center h-24 text-muted-foreground">Belum ada checkout produk.</TableCell>
               </TableRow>
             ) : (
               storeOrders.map(order => {
-                const storeItems = order.items.filter((i: any) => i.store_id === user?.id || i.store_name === user?.name)
+                const storeItems = order.items || []
                 const storeTotal = storeItems.reduce((sum: any, item: any) => sum + (item.price_at_purchase * item.quantity), 0)
                 
                 return (
@@ -90,7 +90,7 @@ export default function StoreOrders() {
                     <TableCell>
                       <ul className="text-sm space-y-1">
                         {storeItems.map((item: any) => (
-                          <li key={item._id}>{item.quantity}x {item.product_name}</li>
+                          <li key={item._id}>{item.quantity}x {item.product_name} {item.size ? `(Ukuran: ${item.size})` : ''}</li>
                         ))}
                       </ul>
                     </TableCell>

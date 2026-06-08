@@ -1,6 +1,6 @@
 import { Link, Outlet, useLocation } from 'react-router-dom'
 import { useAuthStore } from '@/store/useAuthStore'
-import { LayoutDashboard, Package, ShoppingBag, Users, CheckSquare, LogOut } from 'lucide-react'
+import { LayoutDashboard, Package, ShoppingBag, Users, CheckSquare, LogOut, MessageSquare } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 export default function DashboardLayout() {
@@ -17,6 +17,7 @@ export default function DashboardLayout() {
     { href: '/admin', label: 'Monitoring', icon: LayoutDashboard },
     { href: '/admin/approvals', label: 'Persetujuan Toko', icon: CheckSquare },
     { href: '/admin/monitoring', label: 'Pengguna & Toko', icon: Users },
+    { href: '/admin/feedback', label: 'Feedback', icon: MessageSquare },
   ]
   
   const links = user?.role === 'admin' ? adminLinks : storeLinks
