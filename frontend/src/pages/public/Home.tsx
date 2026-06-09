@@ -106,10 +106,10 @@ export default function Home() {
 
   const allActive = products.filter(p => p.is_active)
 
-  // Produk Pilihan: Berdasarkan rating tertinggi, lalu jumlah ulasan
-  const highQualityProducts = [...allActive].sort((a, b) => {
-    if (b.rating !== a.rating) return b.rating - a.rating;
-    return b.reviews_count - a.reviews_count;
+  // Best Seller: Berdasarkan jumlah ulasan terbanyak (menggambarkan paling banyak terjual)
+  const bestSellerProducts = [...allActive].sort((a, b) => {
+    if (b.reviews_count !== a.reviews_count) return (b.reviews_count || 0) - (a.reviews_count || 0);
+    return (b.rating || 0) - (a.rating || 0);
   }).slice(0, 4)
 
   // Produk Terbaru: Berdasarkan tanggal dibuat paling baru
@@ -216,27 +216,22 @@ export default function Home() {
 
 
       {/* ============================
-          FEATURED PRODUCTS
+          BEST SELLER
           ============================ */}
       <section className="py-20 bg-[hsl(37_30%_91%)] relative">
         <div className="absolute inset-0 batik-pattern opacity-30" />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-12">
-            <div>
-              <p className="text-sm font-semibold text-[hsl(43_85%_42%)] uppercase tracking-widest mb-3">Koleksi Unggulan</p>
-              <h2 className="text-3xl sm:text-4xl font-bold text-foreground">Produk Pilihan</h2>
-            </div>
-            <Button variant="outline" className="rounded-xl self-start sm:self-auto" asChild>
-              <Link to="/shop">Lihat Semua <ArrowRight className="ml-2 h-4 w-4" /></Link>
-            </Button>
+          <div className="mb-12">
+            <p className="text-sm font-semibold text-[hsl(43_85%_42%)] uppercase tracking-widest mb-3">Paling Banyak Terjual</p>
+            <h2 className="text-3xl sm:text-4xl font-bold text-foreground">Best Seller</h2>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 stagger-children">
-            {highQualityProducts.length > 0
-              ? highQualityProducts.map(product => (
+            {bestSellerProducts.length > 0
+              ? bestSellerProducts.map(product => (
                 <ProductCard key={product._id} product={product} />
               ))
-              : <p className="text-muted-foreground col-span-full">Belum ada produk pilihan.</p>
+              : <p className="text-muted-foreground col-span-full">Belum ada produk best seller.</p>
             }
           </div>
         </div>
@@ -255,14 +250,9 @@ export default function Home() {
           NEW ARRIVALS
           ============================ */}
       <section className="py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-12">
-          <div>
-            <p className="text-sm font-semibold text-[hsl(43_85%_42%)] uppercase tracking-widest mb-3">Terbaru</p>
-            <h2 className="text-3xl sm:text-4xl font-bold text-foreground">Koleksi Baru</h2>
-          </div>
-          <Button variant="outline" className="rounded-xl self-start sm:self-auto" asChild>
-            <Link to="/shop?sort=newest">Lihat Semua <ArrowRight className="ml-2 h-4 w-4" /></Link>
-          </Button>
+        <div className="mb-12">
+          <p className="text-sm font-semibold text-[hsl(43_85%_42%)] uppercase tracking-widest mb-3">Terbaru</p>
+          <h2 className="text-3xl sm:text-4xl font-bold text-foreground">Koleksi Baru</h2>
         </div>
         {newestProducts.length > 0 ? (
           (() => {

@@ -1,8 +1,8 @@
 const Product = require('../models/Product');
 const Store = require('../models/Store');
 
-// GET /api/v1/products (Public)
-// Supports: ?search=, ?category=, ?region=, ?min_price=, ?max_price=, ?sort=newest|price_asc|price_desc|rating, ?page=, ?limit=
+// GET /api/v1/products (Publik)
+// Bisa nerima: ?search=, ?category=, ?region=, ?min_price=, ?max_price=, ?sort=newest|price_asc|price_desc|rating, ?page=, ?limit=
 exports.getAllProducts = async (req, res) => {
   try {
     const {
@@ -16,12 +16,15 @@ exports.getAllProducts = async (req, res) => {
       limit = 20,
     } = req.query;
 
-    // Build filter query
+    // Bikin filter query buat pencarian
     const filter = { is_active: true };
 
-    // Full-text search: name, description, origin_region, store_name
+    // Pencarian lengkap: nama, deskripsi, daerah asal, sama nama toko
     if (search && search.trim()) {
-      const regex = new RegExp(search.trim().split(/\s+/).join('|'), 'i');
+      // Pake logika AND: teksnya harus ngandung semua kata yang diketik
+      const words = search.trim().split(/\s+/);
+      const regexPattern = words.map(word => `(?=.*${word})`).join('');
+      const regex = new RegExp(regexPattern, 'i');
       filter.$or = [
         { name: regex },
         { description: regex },
@@ -44,7 +47,7 @@ exports.getAllProducts = async (req, res) => {
       if (max_price) filter.price.$lte = Number(max_price);
     }
 
-    // Sort
+    // Buat ngurutin data (sort)
     let sortQuery = { created_at: -1 };
     if (sort === 'price_asc') sortQuery = { price: 1 };
     else if (sort === 'price_desc') sortQuery = { price: -1 };
@@ -88,7 +91,7 @@ exports.getStoreProducts = async (req, res) => {
   }
 };
 
-// GET /api/v1/products/:id (Public)
+// GET /api/v1/products/:id (Publik)
 exports.getProductById = async (req, res) => {
   try {
     const product = await Product.findById(req.params.id);
@@ -115,7 +118,7 @@ exports.createProduct = async (req, res) => {
       }
     }
     
-    // Total stock is sum of sizes
+    // Total stok dapetnya dari gabungan semua ukuran (S+M+L+XL)
     const stock = (Number(sizes.S) || 0) + (Number(sizes.M) || 0) + (Number(sizes.L) || 0) + (Number(sizes.XL) || 0);
     
     let image_urls = [];

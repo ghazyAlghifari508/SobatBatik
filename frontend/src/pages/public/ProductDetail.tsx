@@ -219,7 +219,7 @@ export default function ProductDetail() {
               { label: 'Material', value: product.material },
               { label: 'Motif', value: product.pattern },
               { label: 'Asal Daerah', value: product.origin_region },
-              { label: 'Stok', value: `${product.stock} pcs` },
+              { label: 'Stok', value: `${maxStock} pcs` },
             ].map(({ label, value }) => (
               <div key={label} className="glass-card rounded-xl p-3">
                 <div className="text-xs text-muted-foreground mb-1">{label}</div>

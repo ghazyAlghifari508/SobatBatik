@@ -197,7 +197,7 @@ export default function AdminApprovals() {
                         </Button>
                         <Button 
                           size="sm" 
-                          className="bg-success text-white hover:bg-success/90" 
+                          className="bg-green-600 text-white hover:bg-green-700" 
                           onClick={() => handleApprove(app._id)}
                           disabled={actionLoading === app._id}
                         >
