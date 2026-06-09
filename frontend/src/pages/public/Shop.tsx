@@ -187,20 +187,7 @@ export default function Shop() {
           )}
         </div>
 
-        {/* Sort Dropdown */}
-        <div className="relative">
-          <select
-            value={urlSort}
-            onChange={(e) => handleSortChange(e.target.value)}
-            id="shop-sort-select"
-            className="h-11 pl-4 pr-8 rounded-xl border border-border bg-card text-sm outline-none focus:ring-2 focus:ring-ring appearance-none cursor-pointer min-w-[180px]"
-          >
-            {sortOptions.map(opt => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-          </select>
-          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-        </div>
+
 
         {/* Filter Toggle (Mobile) */}
         <Button

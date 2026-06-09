@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useProductStore } from '@/store/useProductStore'
 import { useCartStore } from '@/store/useCartStore'
+import { useAuthStore } from '@/store/useAuthStore'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import ProductCard from '@/components/ProductCard'
@@ -18,6 +19,7 @@ export default function ProductDetail() {
   const navigate = useNavigate()
   const { products, loading, fetchPublicProducts } = useProductStore()
   const { addItem } = useCartStore()
+  const { isAuthenticated } = useAuthStore()
 
   useEffect(() => {
     if (products.length === 0) {
@@ -70,6 +72,11 @@ export default function ProductDetail() {
     .slice(0, 4)
 
   const handleAddToCart = () => {
+    if (!isAuthenticated) {
+      navigate('/register')
+      return
+    }
+
     let added = 0
     for (let i = 0; i < quantity; i++) {
       if (addItem(product, selectedSize)) added++
@@ -87,6 +94,10 @@ export default function ProductDetail() {
   }
 
   const handleBuyNow = () => {
+    if (!isAuthenticated) {
+      navigate('/register')
+      return
+    }
     for (let i = 0; i < quantity; i++) addItem(product, selectedSize)
     navigate('/cart')
   }
@@ -279,24 +290,36 @@ export default function ProductDetail() {
 
           {/* CTA Buttons */}
           <div className="flex gap-3 flex-col sm:flex-row">
-            <Button
-              size="lg"
-              className="flex-1 h-13 rounded-2xl text-base font-semibold gap-2 shadow-lg"
-              onClick={handleAddToCart}
-              disabled={maxStock === 0}
-            >
-              <ShoppingCart className="h-5 w-5" />
-              {maxStock === 0 ? 'Stok Habis' : 'Tambah ke Keranjang'}
-            </Button>
-            <Button
-              size="lg"
-              variant="outline"
-              className="flex-1 h-13 rounded-2xl text-base font-semibold border-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground"
-              onClick={handleBuyNow}
-              disabled={maxStock === 0}
-            >
-              Beli Sekarang
-            </Button>
+            {!isAuthenticated ? (
+              <Button
+                size="lg"
+                className="flex-1 h-13 rounded-2xl text-base font-semibold gap-2 shadow-lg"
+                onClick={() => navigate('/register')}
+              >
+                Daftar Sekarang
+              </Button>
+            ) : (
+              <>
+                <Button
+                  size="lg"
+                  className="flex-1 h-13 rounded-2xl text-base font-semibold gap-2 shadow-lg"
+                  onClick={handleAddToCart}
+                  disabled={maxStock === 0}
+                >
+                  <ShoppingCart className="h-5 w-5" />
+                  {maxStock === 0 ? 'Stok Habis' : 'Tambah ke Keranjang'}
+                </Button>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="flex-1 h-13 rounded-2xl text-base font-semibold border-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground"
+                  onClick={handleBuyNow}
+                  disabled={maxStock === 0}
+                >
+                  Beli Sekarang
+                </Button>
+              </>
+            )}
           </div>
 
           {/* Secondary actions */}

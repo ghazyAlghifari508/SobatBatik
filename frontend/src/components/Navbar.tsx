@@ -174,9 +174,9 @@ export default function Navbar() {
                 className="h-9 w-9 rounded-xl text-foreground/70 hover:text-primary relative"
                 asChild
               >
-                <Link to="/cart" aria-label="Keranjang belanja">
+                <Link to={isAuthenticated ? "/cart" : "/register"} aria-label="Keranjang belanja">
                   <ShoppingCart className="h-4.5 w-4.5" />
-                  {cartCount > 0 && (
+                  {isAuthenticated && cartCount > 0 && (
                     <span className="absolute -top-0.5 -right-0.5 h-4.5 w-4.5 rounded-full gradient-hero text-white text-[10px] font-bold flex items-center justify-center leading-none shadow-sm">
                       {cartCount > 9 ? '9+' : cartCount}
                     </span>
@@ -229,7 +229,10 @@ export default function Navbar() {
                     )}
                     <DropdownMenuSeparator className="my-1" />
                     <DropdownMenuItem
-                      onClick={logout}
+                      onClick={() => {
+                        logout()
+                        navigate('/')
+                      }}
                       className="rounded-xl cursor-pointer text-destructive focus:text-destructive"
                     >
                       <LogOut className="h-4 w-4 mr-2.5" /> Keluar
