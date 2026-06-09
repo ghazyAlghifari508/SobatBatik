@@ -9,7 +9,7 @@ export interface CartItem extends Product {
 
 interface CartState {
   items: CartItem[]
-  addItem: (product: Product, selectedSize?: string) => boolean
+  addItem: (product: Product, selectedSize?: string, quantity?: number) => boolean
   removeItem: (cartItemId: string) => void
   updateQuantity: (cartItemId: string, quantity: number) => void
   clearCart: () => void
@@ -17,7 +17,7 @@ interface CartState {
 
 export const useCartStore = create<CartState>((set, get) => ({
   items: [],
-  addItem: (product, selectedSize) => {
+  addItem: (product, selectedSize, quantityToAdd = 1) => {
     const state = get()
     const cartItemId = selectedSize ? `${product._id}-${selectedSize}` : product._id
     const existingItem = state.items.find(item => item.cartItemId === cartItemId)
@@ -30,19 +30,22 @@ export const useCartStore = create<CartState>((set, get) => ({
     if (maxStock === 0) return false; // Cannot add out of stock items
 
     if (existingItem) {
-      if (existingItem.quantity >= maxStock) {
+      if (existingItem.quantity + quantityToAdd > maxStock) {
         return false; // Reached maximum stock
       }
       set({
         items: state.items.map(item =>
           item.cartItemId === cartItemId
-            ? { ...item, quantity: item.quantity + 1 }
+            ? { ...item, quantity: item.quantity + quantityToAdd }
             : item
         )
       })
       return true;
     }
-    set({ items: [...state.items, { ...product, cartItemId, quantity: 1, selectedSize }] })
+    
+    if (quantityToAdd > maxStock) return false;
+    
+    set({ items: [...state.items, { ...product, cartItemId, quantity: quantityToAdd, selectedSize }] })
     return true;
   },
   removeItem: (cartItemId) => set((state) => ({

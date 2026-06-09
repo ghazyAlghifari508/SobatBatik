@@ -5,7 +5,7 @@ import { useAuthStore } from '@/store/useAuthStore'
 import type { OrderStatus } from '@/store/useOrderStore'
 import { Button } from '@/components/ui/button'
 import { Package, ChevronDown, ChevronUp, Eye, Loader2, Star, MessageSquare, CheckCircle2 } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn, getImageUrl } from '@/lib/utils'
 import { api } from '@/lib/axios'
 import { toast } from 'sonner'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
@@ -195,13 +195,7 @@ export default function OrderHistory() {
                     <div className="flex -space-x-2">
                       {order.items.slice(0, 3).map(item => (
                         <div key={item._id} className="w-10 h-10 rounded-lg border-2 border-white overflow-hidden bg-muted">
-                          {item.image_url ? (
-                            <img src={item.image_url} alt={item.product_name} className="w-full h-full object-cover" />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center">
-                              <Package className="h-4 w-4 text-muted-foreground" />
-                            </div>
-                          )}
+                            <img src={getImageUrl(item.image_url)} alt={item.product_name} className="w-full h-full object-cover" />
                         </div>
                       ))}
                       {order.items.length > 3 && (
@@ -245,7 +239,7 @@ export default function OrderHistory() {
                       <div key={item._id} className="flex items-center gap-3">
                         <div className="w-12 h-12 rounded-lg overflow-hidden bg-muted shrink-0">
                           {item.image_url
-                            ? <img src={item.image_url} alt={item.product_name} className="w-full h-full object-cover" />
+                            ? <img src={getImageUrl(item.image_url)} alt={item.product_name} className="w-full h-full object-cover" />
                             : <Package className="h-5 w-5 m-auto mt-3.5 text-muted-foreground" />
                           }
                         </div>

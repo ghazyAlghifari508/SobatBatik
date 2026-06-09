@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { ShoppingCart, Heart, Star, Eye, AlertTriangle } from 'lucide-react'
+import { ShoppingCart, Heart, Star, Eye, AlertTriangle, Plus, Minus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { cn, getImageUrl } from '@/lib/utils'
 import type { Product } from '@/store/useProductStore'
 import { useCartStore } from '@/store/useCartStore'
@@ -19,19 +20,41 @@ export default function ProductCard({ product, className }: ProductCardProps) {
   const { addItem } = useCartStore()
   const { isAuthenticated } = useAuthStore()
   const [imageLoaded, setImageLoaded] = useState(false)
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [selectedSize, setSelectedSize] = useState<string>('')
+  const [quantity, setQuantity] = useState(1)
 
-  const handleAddToCart = (e: React.MouseEvent) => {
+  const handleAddToCartClick = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
     if (!isAuthenticated) {
-      navigate('/register')
+      navigate('/login')
       return
     }
-    const success = addItem(product)
+    
+    if (product.sizes) {
+      const availableSizes = Object.entries(product.sizes).filter(([_, stock]) => Number(stock) > 0)
+      if (availableSizes.length > 0) {
+        setSelectedSize(availableSizes[0][0])
+      }
+    }
+    
+    setQuantity(1)
+    setIsModalOpen(true)
+  }
+
+  const handleConfirmAddToCart = () => {
+    if (product.sizes && Object.keys(product.sizes).some(k => Number((product.sizes as any)[k]) > 0) && !selectedSize) {
+      toast.error('Pilih ukuran terlebih dahulu')
+      return
+    }
+
+    const success = addItem(product, selectedSize || undefined, quantity)
     if (success) {
       toast.success(`${product.name} ditambahkan ke keranjang!`, {
-        description: `Rp ${product.price.toLocaleString('id-ID')}`,
+        description: `Rp ${(product.price * quantity).toLocaleString('id-ID')}`,
       })
+      setIsModalOpen(false)
     } else {
       toast.error('Stok tidak mencukupi!', {
         description: 'Anda telah mencapai batas maksimal stok produk ini di keranjang.'
@@ -40,14 +63,15 @@ export default function ProductCard({ product, className }: ProductCardProps) {
   }
 
   return (
-    <Link
-      to={`/product/${product._id}`}
-      className={cn(
-        'group relative flex flex-col overflow-hidden rounded-2xl bg-card card-hover',
-        'border border-border/60 shadow-sm',
-        className
-      )}
-    >
+    <>
+      <Link
+        to={`/product/${product._id}`}
+        className={cn(
+          'group relative flex flex-col overflow-hidden rounded-2xl bg-card card-hover',
+          'border border-border/60 shadow-sm',
+          className
+        )}
+      >
       {/* Image Container */}
       <div className="relative aspect-[4/3] overflow-hidden bg-muted">
         {!imageLoaded && (
@@ -143,7 +167,7 @@ export default function ProductCard({ product, className }: ProductCardProps) {
 
           <Button
             size="icon"
-            onClick={handleAddToCart}
+            onClick={handleAddToCartClick}
             disabled={product.stock === 0}
             aria-label="Tambah ke keranjang"
             className="h-8 w-8 rounded-xl shadow-sm"
@@ -163,5 +187,94 @@ export default function ProductCard({ product, className }: ProductCardProps) {
         )}
       </div>
     </Link>
+
+      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <DialogContent className="sm:max-w-[425px]" onClick={e => e.stopPropagation()}>
+          <DialogHeader>
+            <DialogTitle>Pilih Ukuran & Jumlah</DialogTitle>
+          </DialogHeader>
+          
+          <div className="py-4 space-y-6">
+            {/* Product Info */}
+            <div className="flex items-center gap-3">
+              <img src={getImageUrl(product.image_urls?.[0])} alt={product.name} className="w-16 h-16 rounded-lg object-cover" />
+              <div>
+                <h4 className="font-semibold line-clamp-1">{product.name}</h4>
+                <p className="text-primary font-bold">Rp {product.price.toLocaleString('id-ID')}</p>
+              </div>
+            </div>
+
+            {/* Size Selection */}
+            {product.sizes && Object.keys(product.sizes).some(k => Number((product.sizes as any)[k]) > 0) && (
+              <div className="space-y-3">
+                <label className="text-sm font-medium">Ukuran</label>
+                <div className="flex gap-2">
+                  {Object.entries(product.sizes).map(([size, stock]) => {
+                    const available = Number(stock) > 0
+                    return (
+                      <button
+                        key={size}
+                        type="button"
+                        disabled={!available}
+                        onClick={() => setSelectedSize(size)}
+                        className={cn(
+                          'w-10 h-10 rounded-xl border text-sm font-medium transition-all',
+                          selectedSize === size
+                            ? 'border-primary bg-primary/10 text-primary'
+                            : 'border-border hover:border-primary/50 text-foreground',
+                          !available && 'opacity-50 cursor-not-allowed bg-muted text-muted-foreground'
+                        )}
+                      >
+                        {size}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Quantity */}
+            <div className="space-y-3">
+              <label className="text-sm font-medium">Jumlah</label>
+              <div className="flex items-center gap-4">
+                <div className="flex items-center border border-border rounded-xl">
+                  <button 
+                    type="button"
+                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                    className="w-10 h-10 flex items-center justify-center text-muted-foreground hover:text-primary transition-colors disabled:opacity-50"
+                    disabled={quantity <= 1}
+                  >
+                    <Minus className="h-4 w-4" />
+                  </button>
+                  <span className="w-10 text-center font-medium text-sm">
+                    {quantity}
+                  </span>
+                  <button 
+                    type="button"
+                    onClick={() => {
+                      const maxStock = selectedSize && product.sizes 
+                        ? Number(product.sizes[selectedSize as keyof typeof product.sizes]) || 0
+                        : product.stock
+                      setQuantity(Math.min(maxStock, quantity + 1))
+                    }}
+                    className="w-10 h-10 flex items-center justify-center text-muted-foreground hover:text-primary transition-colors disabled:opacity-50"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </button>
+                </div>
+                <span className="text-xs text-muted-foreground">
+                  Tersisa {selectedSize && product.sizes ? Number(product.sizes[selectedSize as keyof typeof product.sizes]) || 0 : product.stock} buah
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsModalOpen(false)}>Batal</Button>
+            <Button onClick={handleConfirmAddToCart}>Masukkan Keranjang</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }
