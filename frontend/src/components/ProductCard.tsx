@@ -1,11 +1,12 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { ShoppingCart, Heart, Star, Eye, AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { cn, getImageUrl } from '@/lib/utils'
 import type { Product } from '@/store/useProductStore'
 import { useCartStore } from '@/store/useCartStore'
+import { useAuthStore } from '@/store/useAuthStore'
 import { toast } from 'sonner'
 
 interface ProductCardProps {
@@ -14,12 +15,18 @@ interface ProductCardProps {
 }
 
 export default function ProductCard({ product, className }: ProductCardProps) {
+  const navigate = useNavigate()
   const { addItem } = useCartStore()
+  const { isAuthenticated } = useAuthStore()
   const [imageLoaded, setImageLoaded] = useState(false)
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
+    if (!isAuthenticated) {
+      navigate('/register')
+      return
+    }
     const success = addItem(product)
     if (success) {
       toast.success(`${product.name} ditambahkan ke keranjang!`, {

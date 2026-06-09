@@ -1,6 +1,6 @@
 const Feedback = require('../models/Feedback');
 
-// POST /api/v1/feedback — Public: submit feedback from contact form
+// POST /api/v1/feedback — Publik: kirim masukan dari form kontak
 exports.submitFeedback = async (req, res) => {
   try {
     const { name, email, subject, message } = req.body;
@@ -35,7 +35,7 @@ exports.submitFeedback = async (req, res) => {
   }
 };
 
-// GET /api/v1/admin/feedback — Admin: list all feedback
+// GET /api/v1/admin/feedback — Admin: tampilin semua daftar masukan
 exports.getAllFeedback = async (req, res) => {
   try {
     const feedbacks = await Feedback.find().sort({ created_at: -1 });
@@ -50,7 +50,7 @@ exports.getAllFeedback = async (req, res) => {
   }
 };
 
-// PATCH /api/v1/admin/feedback/:id/read — Admin: mark feedback as read
+// PATCH /api/v1/admin/feedback/:id/read — Admin: tandain masukan kalau udah dibaca
 exports.markAsRead = async (req, res) => {
   try {
     const feedback = await Feedback.findById(req.params.id);
@@ -71,7 +71,7 @@ exports.markAsRead = async (req, res) => {
   }
 };
 
-// DELETE /api/v1/admin/feedback/:id — Admin: delete feedback
+// DELETE /api/v1/admin/feedback/:id — Admin: hapus masukan
 exports.deleteFeedback = async (req, res) => {
   try {
     const feedback = await Feedback.findById(req.params.id);

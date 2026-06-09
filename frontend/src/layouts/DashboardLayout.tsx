@@ -1,4 +1,4 @@
-import { Link, Outlet, useLocation } from 'react-router-dom'
+import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/store/useAuthStore'
 import { LayoutDashboard, Package, ShoppingBag, Users, CheckSquare, LogOut, MessageSquare } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 export default function DashboardLayout() {
   const { user, logout } = useAuthStore()
   const location = useLocation()
+  const navigate = useNavigate()
   
   const storeLinks = [
     { href: '/store', label: 'Dashboard', icon: LayoutDashboard },
@@ -60,7 +61,10 @@ export default function DashboardLayout() {
             <p className="text-sm font-medium">{user?.name}</p>
             <p className="text-xs text-muted-foreground">{user?.email}</p>
           </div>
-          <Button variant="outline" className="w-full justify-start gap-3" onClick={logout}>
+          <Button variant="outline" className="w-full justify-start gap-3" onClick={() => {
+            logout()
+            navigate('/')
+          }}>
             <LogOut className="h-4 w-4" />
             Keluar
           </Button>

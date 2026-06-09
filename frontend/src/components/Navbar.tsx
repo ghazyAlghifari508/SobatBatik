@@ -15,7 +15,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { cn } from '@/lib/utils'
+import { cn, getImageUrl } from '@/lib/utils'
 
 const navLinks = [
   { label: 'Beranda', to: '/' },
@@ -45,13 +45,13 @@ export default function Navbar() {
 
   useEffect(() => {
     setMobileOpen(false)
-    // Close search on navigation
+    // Tutup pencarian pas pindah halaman
     setSearchOpen(false)
     setSearchQuery('')
     setSuggestions([])
   }, [location.pathname])
 
-  // Close on Escape key
+  // Tutup pas pencet tombol Escape
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -64,7 +64,7 @@ export default function Navbar() {
     return () => window.removeEventListener('keydown', onKey)
   }, [searchOpen])
 
-  // Live suggestions with debounce
+  // Saran pencarian langsung (live) pake fungsi debounce (biar ga spam request)
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
     if (!searchQuery.trim() || searchQuery.trim().length < 2) {
@@ -74,7 +74,7 @@ export default function Navbar() {
     debounceRef.current = setTimeout(async () => {
       setSuggestLoading(true)
       try {
-        // Fetch suggestions via API directly (not polluting main store)
+        // Ambil data saran langsung lewat API (biar ga menuh-menuhin state utama)
         const { api } = await import('@/lib/axios')
         const res = await api.get(`/products?search=${encodeURIComponent(searchQuery.trim())}&limit=5`)
         if (res.data.success) setSuggestions(res.data.data)
@@ -123,7 +123,7 @@ export default function Navbar() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16 lg:h-20">
 
-            {/* Logo */}
+            {/* Logo web kita */}
             <Link
               to="/"
               className="flex items-center group shrink-0"
@@ -133,7 +133,7 @@ export default function Navbar() {
               </div>
             </Link>
 
-            {/* Desktop Nav Links */}
+            {/* Link Navigasi buat tampilan Desktop */}
             <nav className="hidden lg:flex items-center gap-1">
               {navLinks.map((link) => (
                 <Link
@@ -151,9 +151,9 @@ export default function Navbar() {
               ))}
             </nav>
 
-            {/* Right Icons */}
+            {/* Ikon-ikon di pojok kanan */}
             <div className="flex items-center gap-1">
-              {/* Search */}
+              {/* Tombol Pencarian */}
               <Button
                 variant="ghost"
                 size="icon"
@@ -167,16 +167,16 @@ export default function Navbar() {
 
 
 
-              {/* Cart */}
+              {/* Keranjang Belanja */}
               <Button
                 variant="ghost"
                 size="icon"
                 className="h-9 w-9 rounded-xl text-foreground/70 hover:text-primary relative"
                 asChild
               >
-                <Link to="/cart" aria-label="Keranjang belanja">
+                <Link to={isAuthenticated ? "/cart" : "/register"} aria-label="Keranjang belanja">
                   <ShoppingCart className="h-4.5 w-4.5" />
-                  {cartCount > 0 && (
+                  {isAuthenticated && cartCount > 0 && (
                     <span className="absolute -top-0.5 -right-0.5 h-4.5 w-4.5 rounded-full gradient-hero text-white text-[10px] font-bold flex items-center justify-center leading-none shadow-sm">
                       {cartCount > 9 ? '9+' : cartCount}
                     </span>
@@ -184,7 +184,7 @@ export default function Navbar() {
                 </Link>
               </Button>
 
-              {/* Profile / Auth */}
+              {/* Profil User / Menu Login */}
               {isAuthenticated && user ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -229,7 +229,10 @@ export default function Navbar() {
                     )}
                     <DropdownMenuSeparator className="my-1" />
                     <DropdownMenuItem
-                      onClick={logout}
+                      onClick={() => {
+                        logout()
+                        navigate('/')
+                      }}
                       className="rounded-xl cursor-pointer text-destructive focus:text-destructive"
                     >
                       <LogOut className="h-4 w-4 mr-2.5" /> Keluar
@@ -247,7 +250,7 @@ export default function Navbar() {
                 </div>
               )}
 
-              {/* Mobile Menu Button */}
+              {/* Tombol Menu buat HP/Mobile */}
               <Button
                 variant="ghost"
                 size="icon"
@@ -261,7 +264,7 @@ export default function Navbar() {
           </div>
         </div>
 
-        {/* Mobile Menu */}
+        {/* Menu Navigasi versi HP/Mobile */}
         {mobileOpen && (
           <div className="lg:hidden glass-warm border-t border-border/50 animate-fade-in">
             <nav className="max-w-7xl mx-auto px-4 py-4 space-y-1">
@@ -294,7 +297,7 @@ export default function Navbar() {
         )}
       </header>
 
-      {/* Search Modal */}
+      {/* Modal/Pop-up buat Fitur Pencarian */}
       {searchOpen && (
         <div
           className="fixed inset-0 z-[60] flex items-start justify-center pt-20 px-4"
@@ -305,7 +308,7 @@ export default function Navbar() {
             className="relative w-full max-w-xl animate-fade-in-up"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Search input */}
+            {/* Kolom input pencariannya */}
             <div className="glass-card rounded-2xl shadow-2xl">
               <form onSubmit={handleSearch} className="flex items-center gap-3 px-4 py-3">
                 <Search className="h-5 w-5 text-muted-foreground shrink-0" />
@@ -330,7 +333,7 @@ export default function Navbar() {
                 <Button type="submit" size="sm" className="rounded-xl shrink-0">Cari</Button>
               </form>
 
-              {/* Live suggestions */}
+              {/* Daftar hasil pencarian langsung (live) */}
               {searchQuery.trim().length >= 2 && (
                 <div className="border-t border-border/50">
                   {suggestLoading ? (
@@ -347,7 +350,7 @@ export default function Navbar() {
                             onClick={() => handleSuggestionClick(product)}
                           >
                             <img
-                              src={product.image_urls?.[0] || 'https://via.placeholder.com/40x40?text=B'}
+                              src={getImageUrl(product.image_urls?.[0])}
                               alt={product.name}
                               className="w-10 h-10 rounded-lg object-cover shrink-0 border border-border/50"
                               onError={(e) => { (e.target as HTMLImageElement).src = 'https://via.placeholder.com/40x40?text=B' }}
@@ -382,7 +385,7 @@ export default function Navbar() {
                 </div>
               )}
 
-              {/* Popular searches (shown when query is empty) */}
+              {/* Daftar pencarian yang lagi ngetren (muncul pas inputan kosong) */}
               {!searchQuery.trim() && (
                 <div className="border-t border-border/50 px-4 py-3">
                   <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-1.5">
@@ -407,7 +410,7 @@ export default function Navbar() {
         </div>
       )}
 
-      {/* Spacer for fixed header */}
+      {/* Jarak kosong biar konten di bawahnya ga ketutup navbar yang nge-fix di atas */}
       <div className="h-16 lg:h-20" />
     </>
   )
